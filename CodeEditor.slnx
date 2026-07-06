@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CodeEditor.Application/CodeEditor.Application.csproj" />
+    <Project Path="src/CodeEditor.Core/CodeEditor.Core.csproj" />
+    <Project Path="src/CodeEditor.Infrastructure/CodeEditor.Infrastructure.csproj" />
+    <Project Path="src/CodeEditor/CodeEditor.csproj" />
+  </Folder>
+</Solution>
