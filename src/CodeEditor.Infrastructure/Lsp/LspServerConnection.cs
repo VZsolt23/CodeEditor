@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using CodeEditor.Core.Completion;
 using CodeEditor.Core.Diagnostics;
+using CodeEditor.Core.Workspace;
 using StreamJsonRpc;
 
 namespace CodeEditor.Infrastructure.Lsp;
@@ -206,6 +207,41 @@ public sealed class LspServerConnection : IDisposable
         return mapped.Count > 0 ? mapped : null;
     }
 
+    /// <summary>
+    /// Requests the definition(s) of the symbol at a 0-based
+    /// <paramref name="line"/>/<paramref name="character"/> position. Handles the
+    /// Location, Location[], and LocationLink[] reply shapes; excerpts are read from
+    /// the target files. Empty when the server resolves nothing.
+    /// </summary>
+    public async Task<IReadOnlyList<SearchMatch>> RequestDefinitionAsync(
+        string filePath, int line, int character, CancellationToken cancellationToken = default)
+    {
+        var result = await _rpc.InvokeWithParameterObjectAsync<JsonElement?>(
+            "textDocument/definition",
+            new { textDocument = new { uri = ToUri(filePath) }, position = new { line, character } },
+            cancellationToken).ConfigureAwait(false);
+
+        if (result is not { } element)
+        {
+            return [];
+        }
+
+        var matches = new List<SearchMatch>();
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var location in element.EnumerateArray())
+            {
+                AddLocation(location, matches);
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Object)
+        {
+            AddLocation(element, matches);
+        }
+
+        return matches;
+    }
+
     /// <summary>Performs the polite shutdown/exit sequence, tolerating a dead server.</summary>
     public async Task ShutdownAsync(CancellationToken cancellationToken = default)
     {
@@ -368,6 +404,63 @@ public sealed class LspServerConnection : IDisposable
             25 => "Type parameter",
             _ => string.Empty,
         };
+    }
+
+    /// <summary>Maps one LSP Location or LocationLink to a <see cref="SearchMatch"/> (with a disk-read excerpt).</summary>
+    private static void AddLocation(JsonElement location, List<SearchMatch> matches)
+    {
+        var uri = GetString(location, "uri") ?? GetString(location, "targetUri");
+        if (uri is null)
+        {
+            return;
+        }
+
+        JsonElement range;
+        if (!location.TryGetProperty("range", out range)
+            && !location.TryGetProperty("targetSelectionRange", out range)
+            && !location.TryGetProperty("targetRange", out range))
+        {
+            return;
+        }
+
+        if (range.ValueKind != JsonValueKind.Object || !range.TryGetProperty("start", out var start))
+        {
+            return;
+        }
+
+        string path;
+        try
+        {
+            path = new Uri(uri).LocalPath;
+        }
+        catch (UriFormatException)
+        {
+            return;
+        }
+
+        var lineIndex = start.GetProperty("line").GetInt32();
+        var startChar = start.GetProperty("character").GetInt32();
+        var endChar = range.TryGetProperty("end", out var end) && end.GetProperty("line").GetInt32() == lineIndex
+            ? end.GetProperty("character").GetInt32()
+            : startChar;
+
+        var lineText = ReadLine(path, lineIndex) ?? string.Empty;
+        var clampedStart = Math.Clamp(startChar, 0, lineText.Length);
+        var length = Math.Clamp(endChar - startChar, 1, Math.Max(1, lineText.Length - clampedStart));
+        matches.Add(SearchMatchFactory.Create(path, lineIndex + 1, lineText, clampedStart, length));
+    }
+
+    /// <summary>Reads a single 0-based line from a file, or null when it cannot be read.</summary>
+    private static string? ReadLine(string path, int lineIndex)
+    {
+        try
+        {
+            return File.ReadLines(path).Skip(lineIndex).FirstOrDefault();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return null;
+        }
     }
 
     private static string? GetString(JsonElement element, string property)

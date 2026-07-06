@@ -1,5 +1,6 @@
 using CodeEditor.Core.Completion;
 using CodeEditor.Core.Diagnostics;
+using CodeEditor.Core.Workspace;
 
 namespace CodeEditor.Application.Interfaces;
 
@@ -48,5 +49,13 @@ public interface ILspService
     /// is running or nothing applies.
     /// </summary>
     Task<IReadOnlyList<CompletionItemInfo>?> GetCompletionsAsync(
+        string filePath, int line, int character, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests the definition(s) of the symbol at a 0-based
+    /// <paramref name="line"/>/<paramref name="character"/> position. Empty when no
+    /// server is running or nothing resolves.
+    /// </summary>
+    Task<IReadOnlyList<SearchMatch>> GetDefinitionsAsync(
         string filePath, int line, int character, CancellationToken cancellationToken = default);
 }

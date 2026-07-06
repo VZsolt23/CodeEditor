@@ -3,6 +3,7 @@ using CodeEditor.Application.Interfaces;
 using CodeEditor.Application.Services;
 using CodeEditor.Core.Completion;
 using CodeEditor.Core.Documents;
+using CodeEditor.Core.Workspace;
 using CodeEditor.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -205,6 +206,32 @@ public sealed partial class DocumentViewModel : ObservableObject
         => FilePath is null || Language.Id != "csharp"
             ? Task.FromResult<SignatureHelpInfo?>(null)
             : _codeAnalysis.GetSignatureHelpAsync(FilePath, Document.Text, offset, cancellationToken);
+
+    /// <summary>
+    /// Source definitions of the symbol at <paramref name="offset"/>: Roslyn for
+    /// C#, the language server for TypeScript/JavaScript, empty otherwise.
+    /// </summary>
+    public async Task<IReadOnlyList<SearchMatch>> GetDefinitionsAsync(int offset, CancellationToken cancellationToken = default)
+    {
+        if (FilePath is null)
+        {
+            return [];
+        }
+
+        if (Language.Id == "csharp")
+        {
+            return await _codeAnalysis.GetDefinitionsAsync(FilePath, Document.Text, offset, cancellationToken);
+        }
+
+        if (!LspLanguages.Includes(Language.Id))
+        {
+            return [];
+        }
+
+        await _lspService.NotifyDocumentChangedAsync(FilePath, Document.Text, cancellationToken);
+        var location = Document.GetLocation(Math.Clamp(offset, 0, Document.TextLength));
+        return await _lspService.GetDefinitionsAsync(FilePath, location.Line - 1, location.Column - 1, cancellationToken);
+    }
 
     /// <summary>Requests the editor to move the caret and select <paramref name="selectionLength"/> characters.</summary>
     public void NavigateTo(int line, int column, int selectionLength, bool focusEditor = true)

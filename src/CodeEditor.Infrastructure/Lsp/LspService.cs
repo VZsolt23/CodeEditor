@@ -3,6 +3,7 @@ using System.Diagnostics;
 using CodeEditor.Application.Interfaces;
 using CodeEditor.Core.Completion;
 using CodeEditor.Core.Diagnostics;
+using CodeEditor.Core.Workspace;
 using Microsoft.Extensions.Logging;
 using StreamJsonRpc;
 
@@ -179,6 +180,35 @@ public sealed class LspService : ILspService, IDisposable
         catch (Exception ex) when (IsServerFailure(ex) || ex is OperationCanceledException)
         {
             return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<SearchMatch>> GetDefinitionsAsync(
+        string filePath, int line, int character, CancellationToken cancellationToken = default)
+    {
+        LspServerConnection? connection;
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            connection = _connection;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (connection is null)
+        {
+            return [];
+        }
+
+        try
+        {
+            return await connection.RequestDefinitionAsync(filePath, line, character, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsServerFailure(ex) || ex is OperationCanceledException)
+        {
+            return [];
         }
     }
 
