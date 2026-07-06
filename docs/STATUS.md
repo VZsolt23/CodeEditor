@@ -81,6 +81,8 @@ VS Code-derived look. All six phases landed (see the done list above / DESIGN.md
 
 **The Ember design overhaul is complete** (pending final user visual sign-off).
 
+- [x] **File icons (Devicon)** — explorer file nodes show language-specific icons from the bundled Devicon font (`Assets/Fonts/devicon.ttf`, family "devicon", MIT — see `DEVICON-LICENSE.txt`; added as a WPF `Resource`). `FileIconCatalog` (Services) maps ~40 extensions + special names (Dockerfile, package.json, .gitignore) to a glyph codepoint and brand color; `FileTreeItemViewModel` resolves it at construction. The tree template shows the Devicon glyph (brand-colored) for known files and falls back to the generic themed Segoe glyph for folders and unknown files. Font family + all mapped codepoints verified against the TTF via `GlyphTypeface`. _Awaiting user visual review (brand colors on both themes)._
+
 ### Phase 5 — LSP (rest, resumes after the design overhaul)
 
 - [ ] Map remaining LSP features: completion, definition, rename, formatting → same editor plumbing Roslyn uses (hover done; consider a common `ILanguageService` facade routed by `LanguageInfo.Id`)

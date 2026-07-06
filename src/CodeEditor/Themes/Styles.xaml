@@ -373,6 +373,9 @@
         </Setter>
     </Style>
 
+    <!-- Bundled Devicon icon font, for language-specific file icons in the explorer. -->
+    <FontFamily x:Key="Font.Devicon">/CodeEditor;component/Assets/Fonts/#devicon</FontFamily>
+
     <!-- Keyboard-key chip used on the welcome screen. -->
     <Style x:Key="KeycapStyle" TargetType="{x:Type Border}">
         <Setter Property="Background" Value="{DynamicResource Brush.Surface.Sunken}" />

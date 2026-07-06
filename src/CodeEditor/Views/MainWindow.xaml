@@ -277,10 +277,40 @@
                         <TreeView.ItemTemplate>
                             <HierarchicalDataTemplate DataType="{x:Type vm:FileTreeItemViewModel}" ItemsSource="{Binding Children}">
                                 <StackPanel Orientation="Horizontal" Background="Transparent">
-                                    <TextBlock Text="{Binding IconGlyph}"
-                                               FontFamily="Segoe MDL2 Assets"
-                                               FontSize="12"
-                                               VerticalAlignment="Center" />
+                                    <Grid Width="16" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding IconGlyph}"
+                                                   FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="12"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding UsesLanguageIcon}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding LanguageIconGlyph}"
+                                                   FontFamily="{StaticResource Font.Devicon}"
+                                                   FontSize="14"
+                                                   Foreground="{Binding LanguageIconBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding UsesLanguageIcon}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
                                     <TextBlock Text="{Binding Name}"
                                                Margin="6,0,0,0"
                                                VerticalAlignment="Center" />

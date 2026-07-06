@@ -1,5 +1,7 @@
 ﻿using System.Collections.ObjectModel;
+using System.Windows.Media;
 using CodeEditor.Core.Workspace;
+using CodeEditor.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -35,6 +37,11 @@ public sealed partial class FileTreeItemViewModel : ObservableObject
         {
             Children.Add(LoadingPlaceholder);
         }
+        else if (FileIconCatalog.TryResolve(Name, out var languageGlyph, out var languageBrush))
+        {
+            LanguageIconGlyph = languageGlyph;
+            LanguageIconBrush = languageBrush;
+        }
     }
 
     /// <summary>Placeholder-only constructor; the instance is never interacted with.</summary>
@@ -61,10 +68,19 @@ public sealed partial class FileTreeItemViewModel : ObservableObject
     /// <summary>Whether children have been enumerated (refreshes are skipped otherwise).</summary>
     public bool HasLoadedChildren => _childrenLoaded;
 
-    /// <summary>Segoe MDL2 Assets glyph shown next to the name.</summary>
+    /// <summary>Segoe MDL2 Assets glyph shown for folders and files without a language icon.</summary>
     public string IconGlyph => IsDirectory
         ? (IsExpanded ? "\uE838" : "\uE8B7")
         : "\uE7C3";
+
+    /// <summary>Devicon glyph for this file's type, or empty when none applies.</summary>
+    public string LanguageIconGlyph { get; } = string.Empty;
+
+    /// <summary>Brand-color brush for <see cref="LanguageIconGlyph"/>, or null when none applies.</summary>
+    public Brush? LanguageIconBrush { get; }
+
+    /// <summary>Whether a Devicon language icon (rather than the generic glyph) should be shown.</summary>
+    public bool UsesLanguageIcon => LanguageIconBrush is not null;
 
     /// <summary>
     /// Re-enumerates this directory's children, reusing existing child ViewModels
