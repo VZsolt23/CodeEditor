@@ -143,7 +143,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Jumps to the definition of the symbol at the caret (F12); Roslyn for C#, LSP for TS/JS.</summary>
-    [RelayCommand(CanExecute = nameof(CanGoToDefinition))]
+    [RelayCommand(CanExecute = nameof(CanNavigateSymbol))]
     private async Task GoToDefinitionAsync()
     {
         if (Documents.ActiveDocument is not { FilePath: not null } document
@@ -176,11 +176,22 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>Lists all references of the symbol at the caret in the search panel (Shift+F12).</summary>
-    [RelayCommand(CanExecute = nameof(CanUseLanguageServices))]
+    /// <summary>Lists all references of the symbol at the caret in the search panel (Shift+F12); Roslyn for C#, LSP for TS/JS.</summary>
+    [RelayCommand(CanExecute = nameof(CanNavigateSymbol))]
     private async Task FindAllReferencesAsync()
     {
-        if (await RunSymbolQueryAsync(_codeAnalysisService.FindReferencesAsync) is not { } references)
+        if (Documents.ActiveDocument is not { FilePath: not null } document
+            || GetCaretOffset(document) is not { } offset)
+        {
+            return;
+        }
+
+        IReadOnlyList<SearchMatch> references;
+        try
+        {
+            references = await document.GetReferencesAsync(offset);
+        }
+        catch (OperationCanceledException)
         {
             return;
         }
@@ -312,31 +323,11 @@ public sealed partial class MainViewModel : ObservableObject
     private bool CanUseLanguageServices()
         => Documents.ActiveDocument is { FilePath: not null } document && document.Language.Id == "csharp";
 
-    // Go to Definition works for C# (Roslyn) and the LSP languages; the other
-    // symbol commands are still C#-only until their LSP paths are wired.
-    private bool CanGoToDefinition()
+    // Go to Definition and Find All References work for C# (Roslyn) and the LSP
+    // languages; Rename and Format are still C#-only until their LSP paths are wired.
+    private bool CanNavigateSymbol()
         => Documents.ActiveDocument is { FilePath: not null } document
            && (document.Language.Id == "csharp" || LspLanguages.Includes(document.Language.Id));
-
-    /// <summary>Runs a caret-based symbol query against the active document, or null when unavailable/cancelled.</summary>
-    private async Task<IReadOnlyList<SearchMatch>?> RunSymbolQueryAsync(
-        Func<string, string, int, CancellationToken, Task<IReadOnlyList<SearchMatch>>> query)
-    {
-        if (Documents.ActiveDocument is not { FilePath: { } filePath } document
-            || GetCaretOffset(document) is not { } offset)
-        {
-            return null;
-        }
-
-        try
-        {
-            return await query(filePath, document.Document.Text, offset, CancellationToken.None);
-        }
-        catch (OperationCanceledException)
-        {
-            return null;
-        }
-    }
 
     private async Task NavigateToMatchAsync(SearchMatch match)
     {

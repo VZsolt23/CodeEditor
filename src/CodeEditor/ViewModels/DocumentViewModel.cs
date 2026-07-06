@@ -233,6 +233,32 @@ public sealed partial class DocumentViewModel : ObservableObject
         return await _lspService.GetDefinitionsAsync(FilePath, location.Line - 1, location.Column - 1, cancellationToken);
     }
 
+    /// <summary>
+    /// All references to the symbol at <paramref name="offset"/>: Roslyn for C#, the
+    /// language server for TypeScript/JavaScript, empty otherwise.
+    /// </summary>
+    public async Task<IReadOnlyList<SearchMatch>> GetReferencesAsync(int offset, CancellationToken cancellationToken = default)
+    {
+        if (FilePath is null)
+        {
+            return [];
+        }
+
+        if (Language.Id == "csharp")
+        {
+            return await _codeAnalysis.FindReferencesAsync(FilePath, Document.Text, offset, cancellationToken);
+        }
+
+        if (!LspLanguages.Includes(Language.Id))
+        {
+            return [];
+        }
+
+        await _lspService.NotifyDocumentChangedAsync(FilePath, Document.Text, cancellationToken);
+        var location = Document.GetLocation(Math.Clamp(offset, 0, Document.TextLength));
+        return await _lspService.GetReferencesAsync(FilePath, location.Line - 1, location.Column - 1, cancellationToken);
+    }
+
     /// <summary>Requests the editor to move the caret and select <paramref name="selectionLength"/> characters.</summary>
     public void NavigateTo(int line, int column, int selectionLength, bool focusEditor = true)
         => PendingNavigation = new DocumentNavigation(line, column, selectionLength, focusEditor);

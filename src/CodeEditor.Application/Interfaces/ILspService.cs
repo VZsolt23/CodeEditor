@@ -58,4 +58,12 @@ public interface ILspService
     /// </summary>
     Task<IReadOnlyList<SearchMatch>> GetDefinitionsAsync(
         string filePath, int line, int character, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests all references of the symbol at a 0-based
+    /// <paramref name="line"/>/<paramref name="character"/> position. Empty when no
+    /// server is running or nothing resolves.
+    /// </summary>
+    Task<IReadOnlyList<SearchMatch>> GetReferencesAsync(
+        string filePath, int line, int character, CancellationToken cancellationToken = default);
 }

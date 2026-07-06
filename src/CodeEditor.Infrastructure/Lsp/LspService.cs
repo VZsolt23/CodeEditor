@@ -212,6 +212,35 @@ public sealed class LspService : ILspService, IDisposable
         }
     }
 
+    public async Task<IReadOnlyList<SearchMatch>> GetReferencesAsync(
+        string filePath, int line, int character, CancellationToken cancellationToken = default)
+    {
+        LspServerConnection? connection;
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            connection = _connection;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (connection is null)
+        {
+            return [];
+        }
+
+        try
+        {
+            return await connection.RequestReferencesAsync(filePath, line, character, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsServerFailure(ex) || ex is OperationCanceledException)
+        {
+            return [];
+        }
+    }
+
     public void Dispose()
     {
         _connection?.Dispose();

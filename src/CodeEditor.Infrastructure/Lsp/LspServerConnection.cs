@@ -242,6 +242,43 @@ public sealed class LspServerConnection : IDisposable
         return matches;
     }
 
+    /// <summary>
+    /// Requests all references (including the declaration) of the symbol at a 0-based
+    /// <paramref name="line"/>/<paramref name="character"/> position, sorted by file
+    /// then line. Empty when the server resolves nothing.
+    /// </summary>
+    public async Task<IReadOnlyList<SearchMatch>> RequestReferencesAsync(
+        string filePath, int line, int character, CancellationToken cancellationToken = default)
+    {
+        var result = await _rpc.InvokeWithParameterObjectAsync<JsonElement?>(
+            "textDocument/references",
+            new
+            {
+                textDocument = new { uri = ToUri(filePath) },
+                position = new { line, character },
+                context = new { includeDeclaration = true },
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        if (result is not { } element || element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var matches = new List<SearchMatch>();
+        foreach (var location in element.EnumerateArray())
+        {
+            AddLocation(location, matches);
+        }
+
+        matches.Sort(static (left, right) =>
+        {
+            var byPath = string.Compare(left.FilePath, right.FilePath, StringComparison.OrdinalIgnoreCase);
+            return byPath != 0 ? byPath : left.LineNumber.CompareTo(right.LineNumber);
+        });
+        return matches;
+    }
+
     /// <summary>Performs the polite shutdown/exit sequence, tolerating a dead server.</summary>
     public async Task ShutdownAsync(CancellationToken cancellationToken = default)
     {
