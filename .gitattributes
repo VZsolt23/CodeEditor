@@ -1,0 +1,40 @@
+# Normalize line endings: text stored as LF in the repo, checked out per the
+# platform (core.autocrlf). Keeps diffs clean regardless of contributor setup.
+* text=auto
+
+# Source and project files
+*.cs        text diff=csharp
+*.xaml      text
+*.slnx      text
+*.csproj    text
+*.props     text
+*.targets   text
+*.config    text
+*.xml       text
+*.json      text
+*.yml       text
+*.yaml      text
+*.md        text
+*.txt       text
+
+# Scripts keep their native endings
+*.sh        text eol=lf
+*.ps1       text eol=crlf
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+
+# Binary assets — never normalize or diff as text
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.dll       binary
+*.exe       binary
+*.pdb       binary
+*.snk       binary
+*.pfx       binary
+*.ttf       binary
+*.otf       binary
+*.woff      binary
+*.woff2     binary
