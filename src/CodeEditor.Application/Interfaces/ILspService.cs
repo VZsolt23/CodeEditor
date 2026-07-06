@@ -33,4 +33,11 @@ public interface ILspService
 
     /// <summary>Announces a closed document.</summary>
     Task NotifyDocumentClosedAsync(string filePath, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests hover text at a 0-based <paramref name="line"/>/<paramref name="character"/>
+    /// position. Returns null when no server is running or it has nothing to show.
+    /// </summary>
+    Task<string?> GetHoverAsync(
+        string filePath, int line, int character, CancellationToken cancellationToken = default);
 }

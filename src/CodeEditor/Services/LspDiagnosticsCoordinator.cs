@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.Windows.Threading;
 using CodeEditor.Application.Interfaces;
+using CodeEditor.Application.Services;
 using CodeEditor.Core.Diagnostics;
 using CodeEditor.ViewModels;
 using ICSharpCode.AvalonEdit.Document;
@@ -19,8 +20,6 @@ public sealed class LspDiagnosticsCoordinator
 {
     private const string DiagnosticSource = "typescript";
     private static readonly TimeSpan DebounceInterval = TimeSpan.FromMilliseconds(500);
-    private static readonly HashSet<string> LspLanguageIds =
-        ["typescript", "typescriptreact", "javascript", "javascriptreact"];
 
     private readonly ILspService _lspService;
     private readonly IWorkspaceService _workspaceService;
@@ -58,7 +57,7 @@ public sealed class LspDiagnosticsCoordinator
     }
 
     private static bool IsLspDocument(DocumentViewModel document)
-        => document.FilePath is not null && LspLanguageIds.Contains(document.Language.Id);
+        => document.FilePath is not null && LspLanguages.Includes(document.Language.Id);
 
     private void OnWorkspaceChanged(object? sender, EventArgs e) => _ = ResetWorkspaceAsync();
 

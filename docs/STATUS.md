@@ -63,13 +63,14 @@ _Last updated: 2026-07-04. Build verified: `dotnet build CodeEditor.slnx` → 0 
 
 - [x] Generic LSP client over stdio: `LspServerConnection` (Infrastructure, `StreamJsonRpc` + `SystemTextJsonFormatter`) — initialize handshake, full-text document sync (didOpen/didChange/didClose with version tracking), publishDiagnostics mapped to `DiagnosticItem` (0→1-based, code-prefixed messages), polite shutdown/exit. Stream-based, so the protocol layer is tested against an in-process fake server
 - [x] TS/JS server lifecycle + diagnostics: `ILspService`/`LspService` spawns the `typeScriptServerCommand` setting (default `typescript-language-server --stdio`; tries the npm `.cmd` shim on Windows), lazily on first ts/js document, restarted per workspace, killed on dispose; missing server or dead process degrades gracefully with a status-bar hint (`npm install -g typescript-language-server typescript`). `LspDiagnosticsCoordinator` (Presentation) forwards open/change(debounced 500 ms)/close for `typescript`/`typescriptreact`/`javascript`/`javascriptreact` docs and routes pushed diagnostics into squiggles + Problems (source "typescript")
+- [x] TS/JS hover (Quick Info): `LspServerConnection.RequestHoverAsync` (`textDocument/hover`, extracts text from string/MarkupContent/MarkedString[] and strips markdown fences) → `ILspService.GetHoverAsync` (grabs the connection under the gate, runs the round-trip outside it so hover can't block doc sync; null when no server) → `DocumentViewModel.GetQuickInfoAsync` routes by language (Roslyn for C#, LSP for TS/JS, offset→0-based position). Reuses the existing editor hover tooltip unchanged. `LspLanguages` (Application) now single-sources the served language ids
 
 ## Remaining Work
 
-### Design overhaul — "Ember" (next up, takes priority over Phase 5 rest)
+### Design overhaul — "Ember" (complete)
 
 Full spec in [DESIGN.md](DESIGN.md): a unique warm-graphite + copper identity replacing the
-VS Code-derived look. Phases (each: build → smoke test → **user visual review checkpoint**):
+VS Code-derived look. All six phases landed (see the done list above / DESIGN.md):
 
 - [x] **A. Token foundation** — Ember Dark/Light dictionaries (58 identical keys each: all legacy `Brush.*` re-pointed + 14 new semantic tokens `Brush.Canvas`/`Surface.*`/`Border.*`/`Text.*`/`Accent.*`/`Hover`/`Selected`), theme ids unchanged (settings compat), display names "Ember Dark"/"Ember Light"; key-contract verified by script (all 44 referenced keys resolve in both). _Awaiting user visual review._
 - [x] **B. Window chrome** — `WindowChrome` (40px caption, custom buttons, `GlassFrameThickness` keeps DWM shadow/rounding), unified top bar: ember app mark + menus (left), centered workspace pill (click = Open Folder, shows root name), themed min/max/close (close hovers red with `Brush.Text.OnColor`); toolbar row removed (commands live in menus/shortcuts; Menu is its own focus scope so routed Undo/Redo still reach the editor); maximize overhang compensated in `OnStateChanged`. _Awaiting user visual review._
@@ -82,7 +83,7 @@ VS Code-derived look. Phases (each: build → smoke test → **user visual revie
 
 ### Phase 5 — LSP (rest, resumes after the design overhaul)
 
-- [ ] Map remaining LSP features: completion, hover, definition, rename, formatting → same editor plumbing Roslyn uses (consider a common `ILanguageService` facade routed by `LanguageInfo.Id`)
+- [ ] Map remaining LSP features: completion, definition, rename, formatting → same editor plumbing Roslyn uses (hover done; consider a common `ILanguageService` facade routed by `LanguageInfo.Id`)
 - [ ] HTML/CSS language servers (`vscode-html/css-languageservice`-based servers) reusing the same client
 - [ ] Tag matching / auto-closing tags for HTML
 

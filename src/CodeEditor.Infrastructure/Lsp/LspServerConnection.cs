@@ -127,6 +127,22 @@ public sealed class LspServerConnection : IDisposable
             .ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Requests hover text at a 0-based <paramref name="line"/>/<paramref name="character"/>
+    /// position, returning plain text (markdown fences stripped) or null when the
+    /// server has nothing to show.
+    /// </summary>
+    public async Task<string?> RequestHoverAsync(
+        string filePath, int line, int character, CancellationToken cancellationToken = default)
+    {
+        var result = await _rpc.InvokeWithParameterObjectAsync<JsonElement?>(
+            "textDocument/hover",
+            new { textDocument = new { uri = ToUri(filePath) }, position = new { line, character } },
+            cancellationToken).ConfigureAwait(false);
+
+        return result is { } element ? ExtractHoverText(element) : null;
+    }
+
     /// <summary>Performs the polite shutdown/exit sequence, tolerating a dead server.</summary>
     public async Task ShutdownAsync(CancellationToken cancellationToken = default)
     {
@@ -193,6 +209,38 @@ public sealed class LspServerConnection : IDisposable
             start.Character + 1,
             _diagnosticSource,
             length);
+    }
+
+    /// <summary>Extracts text from a hover result's <c>contents</c> (string, MarkupContent, MarkedString, or an array).</summary>
+    private static string? ExtractHoverText(JsonElement result)
+    {
+        if (result.ValueKind != JsonValueKind.Object || !result.TryGetProperty("contents", out var contents))
+        {
+            return null;
+        }
+
+        var text = CleanMarkup(ExtractContents(contents));
+        return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
+
+    private static string ExtractContents(JsonElement contents) => contents.ValueKind switch
+    {
+        JsonValueKind.String => contents.GetString() ?? string.Empty,
+        JsonValueKind.Object => contents.TryGetProperty("value", out var value) ? value.GetString() ?? string.Empty : string.Empty,
+        JsonValueKind.Array => string.Join(
+            Environment.NewLine,
+            contents.EnumerateArray().Select(ExtractContents).Where(part => part.Length > 0)),
+        _ => string.Empty,
+    };
+
+    /// <summary>Drops markdown code-fence lines so the plain hover reads cleanly in the tooltip.</summary>
+    private static string CleanMarkup(string markdown)
+    {
+        var lines = markdown
+            .Replace("\r\n", "\n")
+            .Split('\n')
+            .Where(line => !line.TrimStart().StartsWith("```", StringComparison.Ordinal));
+        return string.Join(Environment.NewLine, lines).Trim();
     }
 
     private static string ToUri(string path) => new Uri(path).AbsoluteUri;

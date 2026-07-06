@@ -118,6 +118,39 @@ public sealed class LspService : ILspService, IDisposable
         }
     }
 
+    public async Task<string?> GetHoverAsync(
+        string filePath, int line, int character, CancellationToken cancellationToken = default)
+    {
+        // Take the connection under the gate, then do the round-trip outside it so a
+        // hover cannot block document-sync notifications (or vice versa). Never starts
+        // the server — hover only works once a document opened it.
+        LspServerConnection? connection;
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            connection = _connection;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (connection is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await connection.RequestHoverAsync(filePath, line, character, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsServerFailure(ex) || ex is OperationCanceledException)
+        {
+            // A failed request is left for the notification paths to tear down.
+            return null;
+        }
+    }
+
     public void Dispose()
     {
         _connection?.Dispose();

@@ -1,5 +1,6 @@
 using System.IO;
 using CodeEditor.Application.Interfaces;
+using CodeEditor.Application.Services;
 using CodeEditor.Core.Completion;
 using CodeEditor.Core.Documents;
 using CodeEditor.Services;
@@ -25,6 +26,7 @@ public sealed partial class DocumentViewModel : ObservableObject
 {
     private readonly string _untitledName;
     private readonly ICodeAnalysisService _codeAnalysis;
+    private readonly ILspService _lspService;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FileName))]
@@ -78,7 +80,8 @@ public sealed partial class DocumentViewModel : ObservableObject
     /// <param name="untitledName">Display name used while the document has no file.</param>
     /// <param name="language">Language resolved for the document.</param>
     /// <param name="options">Shared editor display options.</param>
-    /// <param name="codeAnalysis">C# language services used for completion.</param>
+    /// <param name="codeAnalysis">C# (Roslyn) language services.</param>
+    /// <param name="lspService">LSP language services (TypeScript/JavaScript).</param>
     /// <param name="closeRequested">Callback invoked when the user asks to close this document.</param>
     public DocumentViewModel(
         string? filePath,
@@ -87,11 +90,13 @@ public sealed partial class DocumentViewModel : ObservableObject
         LanguageInfo language,
         EditorOptionsViewModel options,
         ICodeAnalysisService codeAnalysis,
+        ILspService lspService,
         Func<DocumentViewModel, Task> closeRequested)
     {
         ArgumentNullException.ThrowIfNull(closeRequested);
 
         _codeAnalysis = codeAnalysis;
+        _lspService = lspService;
         _filePath = filePath;
         _untitledName = untitledName;
         _language = language;
@@ -128,11 +133,31 @@ public sealed partial class DocumentViewModel : ObservableObject
     public Task<CompletionChangeInfo?> GetCompletionChangeAsync(int itemIndex, CancellationToken cancellationToken = default)
         => _codeAnalysis.GetCompletionChangeAsync(itemIndex, cancellationToken);
 
-    /// <summary>Hover text for the symbol at <paramref name="offset"/> (null for non-C# documents).</summary>
+    /// <summary>
+    /// Hover text for the symbol at <paramref name="offset"/>: Roslyn for C#, the
+    /// language server for TypeScript/JavaScript, null otherwise.
+    /// </summary>
     public Task<string?> GetQuickInfoAsync(int offset, CancellationToken cancellationToken = default)
-        => FilePath is null || Language.Id != "csharp"
-            ? Task.FromResult<string?>(null)
-            : _codeAnalysis.GetQuickInfoAsync(FilePath, Document.Text, offset, cancellationToken);
+    {
+        if (FilePath is null)
+        {
+            return Task.FromResult<string?>(null);
+        }
+
+        if (Language.Id == "csharp")
+        {
+            return _codeAnalysis.GetQuickInfoAsync(FilePath, Document.Text, offset, cancellationToken);
+        }
+
+        if (LspLanguages.Includes(Language.Id))
+        {
+            // LSP positions are 0-based; TextDocument.GetLocation is 1-based line/column.
+            var location = Document.GetLocation(Math.Clamp(offset, 0, Document.TextLength));
+            return _lspService.GetHoverAsync(FilePath, location.Line - 1, location.Column - 1, cancellationToken);
+        }
+
+        return Task.FromResult<string?>(null);
+    }
 
     /// <summary>Overload help for the call at <paramref name="offset"/> (null for non-C# documents).</summary>
     public Task<SignatureHelpInfo?> GetSignatureHelpAsync(int offset, CancellationToken cancellationToken = default)

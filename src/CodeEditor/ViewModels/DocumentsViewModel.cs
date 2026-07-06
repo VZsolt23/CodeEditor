@@ -21,6 +21,7 @@ public sealed partial class DocumentsViewModel : ObservableObject
     private readonly ILanguageRegistry _languageRegistry;
     private readonly ISettingsService _settingsService;
     private readonly ICodeAnalysisService _codeAnalysis;
+    private readonly ILspService _lspService;
     private readonly EditorOptionsViewModel _options;
     private readonly ILogger<DocumentsViewModel> _logger;
     private readonly DispatcherTimer _autoSaveTimer;
@@ -42,6 +43,7 @@ public sealed partial class DocumentsViewModel : ObservableObject
         ILanguageRegistry languageRegistry,
         ISettingsService settingsService,
         ICodeAnalysisService codeAnalysis,
+        ILspService lspService,
         EditorOptionsViewModel options,
         ILogger<DocumentsViewModel> logger)
     {
@@ -51,6 +53,7 @@ public sealed partial class DocumentsViewModel : ObservableObject
         _languageRegistry = languageRegistry;
         _settingsService = settingsService;
         _codeAnalysis = codeAnalysis;
+        _lspService = lspService;
         _options = options;
         _logger = logger;
 
@@ -77,6 +80,7 @@ public sealed partial class DocumentsViewModel : ObservableObject
             language: LanguageInfo.PlainText,
             options: _options,
             codeAnalysis: _codeAnalysis,
+            lspService: _lspService,
             closeRequested: CloseDocumentAsync);
 
         Documents.Add(document);
@@ -129,6 +133,7 @@ public sealed partial class DocumentsViewModel : ObservableObject
             language: _languageRegistry.GetForFile(fullPath),
             options: _options,
             codeAnalysis: _codeAnalysis,
+            lspService: _lspService,
             closeRequested: CloseDocumentAsync);
 
         Documents.Add(document);
