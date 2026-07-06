@@ -121,13 +121,54 @@ public sealed partial class DocumentViewModel : ObservableObject
     public string FileName => FilePath is null ? _untitledName : Path.GetFileName(FilePath);
 
     /// <summary>
-    /// Requests code completion at <paramref name="offset"/> for the current buffer.
-    /// Returns null for documents without C# language services.
+    /// Requests code completion at <paramref name="offset"/>: Roslyn for C#, the
+    /// language server for TypeScript/JavaScript, null otherwise.
     /// </summary>
-    public Task<CompletionResultInfo?> GetCompletionsAsync(int offset, CancellationToken cancellationToken = default)
-        => FilePath is null || Language.Id != "csharp"
-            ? Task.FromResult<CompletionResultInfo?>(null)
-            : _codeAnalysis.GetCompletionsAsync(FilePath, Document.Text, offset, cancellationToken);
+    public async Task<CompletionResultInfo?> GetCompletionsAsync(int offset, CancellationToken cancellationToken = default)
+    {
+        if (FilePath is null)
+        {
+            return null;
+        }
+
+        if (Language.Id == "csharp")
+        {
+            return await _codeAnalysis.GetCompletionsAsync(FilePath, Document.Text, offset, cancellationToken);
+        }
+
+        if (!LspLanguages.Includes(Language.Id))
+        {
+            return null;
+        }
+
+        // Make sure the server has the current buffer before it computes completions.
+        var text = Document.Text;
+        await _lspService.NotifyDocumentChangedAsync(FilePath, text, cancellationToken);
+
+        var location = Document.GetLocation(Math.Clamp(offset, 0, Document.TextLength));
+        var items = await _lspService.GetCompletionsAsync(FilePath, location.Line - 1, location.Column - 1, cancellationToken);
+        if (items is null || items.Count == 0)
+        {
+            return null;
+        }
+
+        // LSP replaces the already-typed word; compute that span from the buffer.
+        var wordStart = FindWordStart(text, offset);
+        return new CompletionResultInfo(wordStart, offset - wordStart, items);
+    }
+
+    private static int FindWordStart(string text, int offset)
+    {
+        var start = Math.Clamp(offset, 0, text.Length);
+        while (start > 0 && IsWordChar(text[start - 1]))
+        {
+            start--;
+        }
+
+        return start;
+
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c is '_' or '$';
+    }
 
     /// <summary>Returns the text change committing an item of the last completion list.</summary>
     public Task<CompletionChangeInfo?> GetCompletionChangeAsync(int itemIndex, CancellationToken cancellationToken = default)

@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using CodeEditor.Core.Completion;
 using CodeEditor.Core.Diagnostics;
 using StreamJsonRpc;
 
@@ -14,6 +16,7 @@ namespace CodeEditor.Infrastructure.Lsp;
 public sealed class LspServerConnection : IDisposable
 {
     private const int MaxDiagnosticsPerFile = 500;
+    private const int MaxCompletionItems = 300;
 
     private readonly JsonRpc _rpc;
     private readonly string _diagnosticSource;
@@ -143,6 +146,66 @@ public sealed class LspServerConnection : IDisposable
         return result is { } element ? ExtractHoverText(element) : null;
     }
 
+    /// <summary>
+    /// Requests completions at a 0-based <paramref name="line"/>/<paramref name="character"/>
+    /// position. Each item carries its own insert text (textEdit/insertText/label,
+    /// snippet placeholders stripped). Returns null when the server offers nothing.
+    /// </summary>
+    public async Task<IReadOnlyList<CompletionItemInfo>?> RequestCompletionAsync(
+        string filePath, int line, int character, CancellationToken cancellationToken = default)
+    {
+        var result = await _rpc.InvokeWithParameterObjectAsync<JsonElement?>(
+            "textDocument/completion",
+            new { textDocument = new { uri = ToUri(filePath) }, position = new { line, character } },
+            cancellationToken).ConfigureAwait(false);
+
+        if (result is not { } element)
+        {
+            return null;
+        }
+
+        // The reply is either a CompletionItem[] or a CompletionList { items: [...] }.
+        JsonElement items;
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            items = element;
+        }
+        else if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty("items", out var listItems))
+        {
+            items = listItems;
+        }
+        else
+        {
+            return null;
+        }
+
+        var mapped = new List<CompletionItemInfo>();
+        var index = 0;
+        foreach (var item in items.EnumerateArray())
+        {
+            var label = GetString(item, "label");
+            if (string.IsNullOrEmpty(label))
+            {
+                continue;
+            }
+
+            mapped.Add(new CompletionItemInfo(
+                index++,
+                label,
+                GetString(item, "filterText") is { Length: > 0 } filter ? filter : label,
+                GetString(item, "sortText") is { Length: > 0 } sort ? sort : label,
+                MapCompletionKind(item),
+                ComputeInsertText(item, label)));
+
+            if (mapped.Count >= MaxCompletionItems)
+            {
+                break;
+            }
+        }
+
+        return mapped.Count > 0 ? mapped : null;
+    }
+
     /// <summary>Performs the polite shutdown/exit sequence, tolerating a dead server.</summary>
     public async Task ShutdownAsync(CancellationToken cancellationToken = default)
     {
@@ -242,6 +305,75 @@ public sealed class LspServerConnection : IDisposable
             .Where(line => !line.TrimStart().StartsWith("```", StringComparison.Ordinal));
         return string.Join(Environment.NewLine, lines).Trim();
     }
+
+    /// <summary>Resolves an item's commit text: textEdit.newText, else insertText, else label; snippets flattened.</summary>
+    private static string ComputeInsertText(JsonElement item, string label)
+    {
+        string text;
+        if (item.TryGetProperty("textEdit", out var textEdit)
+            && textEdit.ValueKind == JsonValueKind.Object
+            && GetString(textEdit, "newText") is { Length: > 0 } editText)
+        {
+            text = editText;
+        }
+        else if (GetString(item, "insertText") is { Length: > 0 } insertText)
+        {
+            text = insertText;
+        }
+        else
+        {
+            text = label;
+        }
+
+        // insertTextFormat 2 = snippet; reduce placeholders to plain text.
+        var isSnippet = item.TryGetProperty("insertTextFormat", out var format)
+            && format.ValueKind == JsonValueKind.Number
+            && format.GetInt32() == 2;
+        return isSnippet ? FlattenSnippet(text) : text;
+    }
+
+    private static string FlattenSnippet(string snippet)
+    {
+        var text = Regex.Replace(snippet, @"\$\{\d+:([^}]*)\}", "$1"); // ${1:name} -> name
+        text = Regex.Replace(text, @"\$\{\d+\}", string.Empty);        // ${1} -> ""
+        text = Regex.Replace(text, @"\$\d+", string.Empty);            // $1, $0 -> ""
+        return text.Replace("\\$", "$").Replace("\\}", "}");
+    }
+
+    /// <summary>Maps the LSP CompletionItemKind enum (1-25) to a short display tag.</summary>
+    private static string MapCompletionKind(JsonElement item)
+    {
+        if (!item.TryGetProperty("kind", out var kind) || kind.ValueKind != JsonValueKind.Number)
+        {
+            return string.Empty;
+        }
+
+        return kind.GetInt32() switch
+        {
+            2 => "Method",
+            3 => "Function",
+            4 => "Constructor",
+            5 => "Field",
+            6 => "Variable",
+            7 => "Class",
+            8 => "Interface",
+            9 => "Module",
+            10 => "Property",
+            13 => "Enum",
+            14 => "Keyword",
+            15 => "Snippet",
+            20 => "Enum member",
+            21 => "Constant",
+            22 => "Struct",
+            25 => "Type parameter",
+            _ => string.Empty,
+        };
+    }
+
+    private static string? GetString(JsonElement element, string property)
+        => element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
 
     private static string ToUri(string path) => new Uri(path).AbsoluteUri;
 

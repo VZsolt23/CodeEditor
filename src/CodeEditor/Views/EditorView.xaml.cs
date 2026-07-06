@@ -251,7 +251,7 @@ public partial class EditorView : UserControl
 
         foreach (var item in result.Items)
         {
-            window.CompletionList.CompletionData.Add(new RoslynCompletionData(item, viewModel));
+            window.CompletionList.CompletionData.Add(new LanguageCompletionData(item, viewModel));
         }
 
         window.Closed += (_, _) => _completionWindow = null;

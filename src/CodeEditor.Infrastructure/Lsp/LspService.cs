@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using CodeEditor.Application.Interfaces;
+using CodeEditor.Core.Completion;
 using CodeEditor.Core.Diagnostics;
 using Microsoft.Extensions.Logging;
 using StreamJsonRpc;
@@ -147,6 +148,36 @@ public sealed class LspService : ILspService, IDisposable
         catch (Exception ex) when (IsServerFailure(ex) || ex is OperationCanceledException)
         {
             // A failed request is left for the notification paths to tear down.
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<CompletionItemInfo>?> GetCompletionsAsync(
+        string filePath, int line, int character, CancellationToken cancellationToken = default)
+    {
+        // Same pattern as hover: take the connection under the gate, request outside it.
+        LspServerConnection? connection;
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            connection = _connection;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (connection is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await connection.RequestCompletionAsync(filePath, line, character, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsServerFailure(ex) || ex is OperationCanceledException)
+        {
             return null;
         }
     }
