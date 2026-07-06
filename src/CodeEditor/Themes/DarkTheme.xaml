@@ -1,0 +1,82 @@
+<!-- Ember Dark theme (see docs/DESIGN.md): warm graphite surfaces, copper accent.
+     Every theme dictionary must define this exact set of brush keys. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ====== Ember semantic tokens (new chrome consumes these) ====== -->
+
+    <SolidColorBrush x:Key="Brush.Canvas" Color="#131110" />
+    <SolidColorBrush x:Key="Brush.Surface" Color="#1C1917" />
+    <SolidColorBrush x:Key="Brush.Surface.Editor" Color="#211D1A" />
+    <SolidColorBrush x:Key="Brush.Surface.Overlay" Color="#282320" />
+    <SolidColorBrush x:Key="Brush.Surface.Sunken" Color="#171412" />
+    <SolidColorBrush x:Key="Brush.Border.Subtle" Color="#2C2724" />
+    <SolidColorBrush x:Key="Brush.Border.Strong" Color="#3D3630" />
+    <SolidColorBrush x:Key="Brush.Text.Primary" Color="#EDE5DA" />
+    <SolidColorBrush x:Key="Brush.Text.Secondary" Color="#B0A494" />
+    <SolidColorBrush x:Key="Brush.Text.Muted" Color="#776C5E" />
+    <SolidColorBrush x:Key="Brush.Accent.Hover" Color="#EE9663" />
+    <SolidColorBrush x:Key="Brush.Accent.Soft" Color="#3A2A1F" />
+    <SolidColorBrush x:Key="Brush.Hover" Color="#282320" />
+    <SolidColorBrush x:Key="Brush.Selected" Color="#322B25" />
+    <SolidColorBrush x:Key="Brush.Text.OnColor" Color="#FFFFFF" />
+
+    <!-- ====== Established keys, re-pointed to Ember values ====== -->
+
+    <SolidColorBrush x:Key="Brush.Window.Background" Color="#131110" />
+    <SolidColorBrush x:Key="Brush.Window.Foreground" Color="#EDE5DA" />
+    <SolidColorBrush x:Key="Brush.Accent" Color="#E1804A" />
+
+    <SolidColorBrush x:Key="Brush.Menu.Background" Color="#131110" />
+    <SolidColorBrush x:Key="Brush.Menu.Popup.Background" Color="#282320" />
+    <SolidColorBrush x:Key="Brush.Menu.Popup.Border" Color="#3D3630" />
+    <SolidColorBrush x:Key="Brush.Menu.Item.Hover" Color="#352E28" />
+
+    <SolidColorBrush x:Key="Brush.Toolbar.Background" Color="#131110" />
+    <SolidColorBrush x:Key="Brush.Toolbar.Button.Hover" Color="#282320" />
+    <SolidColorBrush x:Key="Brush.Toolbar.Button.Pressed" Color="#3A2A1F" />
+
+    <SolidColorBrush x:Key="Brush.Panel.Background" Color="#1C1917" />
+    <SolidColorBrush x:Key="Brush.Panel.Border" Color="#2C2724" />
+    <SolidColorBrush x:Key="Brush.Panel.Header.Foreground" Color="#B0A494" />
+
+    <SolidColorBrush x:Key="Brush.StatusBar.Background" Color="#131110" />
+    <SolidColorBrush x:Key="Brush.StatusBar.Foreground" Color="#B0A494" />
+
+    <SolidColorBrush x:Key="Brush.Tab.Strip.Background" Color="#1C1917" />
+    <SolidColorBrush x:Key="Brush.Tab.Background" Color="#1C1917" />
+    <SolidColorBrush x:Key="Brush.Tab.Foreground" Color="#B0A494" />
+    <SolidColorBrush x:Key="Brush.Tab.Active.Background" Color="#211D1A" />
+    <SolidColorBrush x:Key="Brush.Tab.Active.Foreground" Color="#EDE5DA" />
+    <SolidColorBrush x:Key="Brush.Tab.Hover.Background" Color="#282320" />
+
+    <SolidColorBrush x:Key="Brush.Editor.Background" Color="#211D1A" />
+    <SolidColorBrush x:Key="Brush.Editor.Foreground" Color="#EDE5DA" />
+    <SolidColorBrush x:Key="Brush.Editor.LineNumber" Color="#776C5E" />
+    <SolidColorBrush x:Key="Brush.Editor.CurrentLine" Color="#26211D" />
+    <SolidColorBrush x:Key="Brush.Editor.Selection" Color="#463526" />
+    <SolidColorBrush x:Key="Brush.Editor.FindMatch.Highlight" Color="#40E1804A" />
+    <SolidColorBrush x:Key="Brush.Editor.FindMatch.Current" Color="#5A4022" />
+
+    <!-- Syntax: metallurgy — ember keywords, patina types, brass methods (DESIGN.md) -->
+    <SolidColorBrush x:Key="Brush.Syntax.Keyword" Color="#E1804A" />
+    <SolidColorBrush x:Key="Brush.Syntax.ControlKeyword" Color="#D9707C" />
+    <SolidColorBrush x:Key="Brush.Syntax.Preprocessor" Color="#8A7E70" />
+    <SolidColorBrush x:Key="Brush.Syntax.Type" Color="#7FBFAF" />
+    <SolidColorBrush x:Key="Brush.Syntax.Method" Color="#E3C388" />
+    <SolidColorBrush x:Key="Brush.Syntax.Variable" Color="#C9B8A4" />
+    <SolidColorBrush x:Key="Brush.Syntax.String" Color="#A8B87C" />
+    <SolidColorBrush x:Key="Brush.Syntax.Number" Color="#D9A66F" />
+    <SolidColorBrush x:Key="Brush.Syntax.Comment" Color="#7A6E60" />
+
+    <SolidColorBrush x:Key="Brush.Diagnostic.Error" Color="#E5534B" />
+    <SolidColorBrush x:Key="Brush.Diagnostic.Warning" Color="#D9A13F" />
+    <SolidColorBrush x:Key="Brush.Diagnostic.Info" Color="#5FA8A0" />
+
+    <SolidColorBrush x:Key="Brush.Tree.Item.Hover" Color="#282320" />
+    <SolidColorBrush x:Key="Brush.Tree.Item.Selected.Background" Color="#322B25" />
+    <SolidColorBrush x:Key="Brush.Tree.Item.Selected.Foreground" Color="#EDE5DA" />
+
+    <SolidColorBrush x:Key="Brush.Control.Border" Color="#2C2724" />
+
+</ResourceDictionary>
