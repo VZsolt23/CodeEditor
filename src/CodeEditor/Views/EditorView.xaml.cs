@@ -161,10 +161,76 @@ public partial class EditorView : UserControl
             return;
         }
 
+        if (typed is '>')
+        {
+            TryAutoCloseTag();
+            return;
+        }
+
         if (_completionWindow is null && (char.IsLetter(typed) || typed is '.' or '_'))
         {
             _ = RequestCompletionAsync();
         }
+    }
+
+    /// <summary>
+    /// Auto-closes an HTML/XML tag when '&gt;' is typed: finds the opening tag before
+    /// the caret and inserts the matching closing tag, leaving the caret between them.
+    /// </summary>
+    private void TryAutoCloseTag()
+    {
+        var languageId = ViewModel?.Language.Id;
+        var isHtml = languageId == "html";
+        if (!isHtml && languageId != "xml")
+        {
+            return;
+        }
+
+        var document = Editor.Document;
+        var caret = Editor.CaretOffset;
+        if (caret < 2 || document.GetCharAt(caret - 1) != '>')
+        {
+            return;
+        }
+
+        // Scan back for the tag's '<' (bounded so a stray '<' far away is ignored).
+        var openIndex = -1;
+        for (var i = caret - 2; i >= 0 && caret - i < 512; i--)
+        {
+            var c = document.GetCharAt(i);
+            if (c == '>')
+            {
+                return;
+            }
+
+            if (c == '<')
+            {
+                openIndex = i;
+                break;
+            }
+        }
+
+        if (openIndex < 0)
+        {
+            return;
+        }
+
+        var inner = document.GetText(openIndex + 1, caret - 2 - openIndex);
+        if (Core.Documents.TagAutoCloser.GetOpenTagName(inner, isHtml) is not { } tagName)
+        {
+            return;
+        }
+
+        var closingTag = $"</{tagName}>";
+        if (caret + closingTag.Length <= document.TextLength
+            && document.GetText(caret, closingTag.Length).Equals(closingTag, StringComparison.Ordinal))
+        {
+            // A matching close tag already follows; don't duplicate it.
+            return;
+        }
+
+        document.Insert(caret, closingTag);
+        Editor.CaretOffset = caret;
     }
 
     private async Task RequestSignatureHelpAsync()
