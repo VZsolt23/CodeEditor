@@ -57,6 +57,7 @@
     <SolidColorBrush x:Key="Brush.Editor.Selection" Color="#F0DBC2" />
     <SolidColorBrush x:Key="Brush.Editor.FindMatch.Highlight" Color="#40B65C2E" />
     <SolidColorBrush x:Key="Brush.Editor.FindMatch.Current" Color="#F5DEB9" />
+    <SolidColorBrush x:Key="Brush.Editor.BracketMatch" Color="#E4DAC8" />
 
     <!-- Syntax: metallurgy — ember keywords, patina types, brass methods (DESIGN.md) -->
     <SolidColorBrush x:Key="Brush.Syntax.Keyword" Color="#B65C2E" />

@@ -1,6 +1,6 @@
 # Project Status and Remaining Work
 
-_Last updated: 2026-07-06. Build verified: `dotnet build CodeEditor.slnx` → 0 warnings, 0 errors; app launch + graceful shutdown + settings round-trip smoke-tested. Headless test harness: **147 checks, all passing** — `WorkspaceService`/`SearchService`/`TextSearcher` (filtering, watcher debounce, CRUD, match options, truncation, cancellation, word boundaries), `OutputService`/`OutputLoggerProvider` (channel caps, log formatting), `RecentFilesService` (change event on the caller's thread), `TerminalService` (shell echo/exit/dispose-kill), `RoslynWorkspaceService` (the full C# feature set — diagnostics, completion, quick info, signature help, definitions/references/rename, formatting, classification — against a real MSBuild-loaded project), and the LSP client (`LspServerConnection`/`LspService`: handshake, document sync, diagnostics mapping, hover, completion, definition, and graceful degradation) against an in-process fake server._
+_Last updated: 2026-07-06. Build verified: `dotnet build CodeEditor.slnx` → 0 warnings, 0 errors; app launch + graceful shutdown + settings round-trip smoke-tested. Headless test harness: **157 checks, all passing** — `WorkspaceService`/`SearchService`/`TextSearcher` (filtering, watcher debounce, CRUD, match options, truncation, cancellation, word boundaries), `OutputService`/`OutputLoggerProvider` (channel caps, log formatting), `RecentFilesService` (change event on the caller's thread), `TerminalService` (shell echo/exit/dispose-kill), `RoslynWorkspaceService` (the full C# feature set — diagnostics, completion, quick info, signature help, definitions/references/rename, formatting, classification — against a real MSBuild-loaded project), and the LSP client (`LspServerConnection`/`LspService`: handshake, document sync, diagnostics mapping, hover, completion, definition, and graceful degradation) against an in-process fake server._
 
 ## Where We Are
 
@@ -98,7 +98,7 @@ VS Code-derived look. All six phases landed:
 
 ### Cross-Cutting Backlog (items from [SPEC.md](SPEC.md) not yet tied to a phase)
 
-- [ ] Bracket matching highlight (custom AvalonEdit renderer)
+- [x] Bracket matching highlight — `Core.Documents.BracketMatcher` (pure; scans a char accessor so the editor's rope isn't copied, bounded scan, prefers the bracket before the caret) → `BracketMatchRenderer` (an `IBackgroundRenderer` boxing the `()`/`[]`/`{}` pair with `Brush.Editor.BracketMatch` + a border). `EditorView` recomputes on caret move / tab switch and redraws only when the pair changes. Literal bracket counting (no string/comment awareness) — the common lightweight behavior
 - [ ] Code folding (XML folding strategy exists in AvalonEdit; brace folding needs a strategy)
 - [ ] Read-only mode for documents
 - [ ] Settings hot-reload (watch `settings.json`; today changes apply on restart, except toggles changed via the View menu)

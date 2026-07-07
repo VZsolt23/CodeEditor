@@ -22,6 +22,7 @@ public partial class EditorView : UserControl
     private readonly SearchHighlightRenderer _searchHighlightRenderer = new();
     private readonly DiagnosticSquiggleRenderer _squiggleRenderer = new();
     private readonly SemanticHighlightColorizer _semanticColorizer = new();
+    private readonly BracketMatchRenderer _bracketRenderer = new();
 
     private EditorOptionsViewModel? _observedOptions;
     private DocumentViewModel? _observedDocument;
@@ -44,6 +45,7 @@ public partial class EditorView : UserControl
         Editor.TextArea.SelectionBorder = null;
         UpdateCaretBrush();
 
+        Editor.TextArea.TextView.BackgroundRenderers.Add(_bracketRenderer);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_searchHighlightRenderer);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_squiggleRenderer);
         // Added after construction, so it stays behind the highlighting colorizer
@@ -532,6 +534,19 @@ public partial class EditorView : UserControl
     {
         var caret = Editor.TextArea.Caret;
         ViewModel?.UpdateCaret(caret.Line, caret.Column);
+        UpdateBracketMatch();
+    }
+
+    /// <summary>Recomputes the matched bracket pair for the caret; redraws only when it changes.</summary>
+    private void UpdateBracketMatch()
+    {
+        var document = Editor.Document;
+        var match = Core.Documents.BracketMatcher.Match(document.TextLength, document.GetCharAt, Editor.CaretOffset);
+        if (match != _bracketRenderer.Brackets)
+        {
+            _bracketRenderer.Brackets = match;
+            Editor.TextArea.TextView.InvalidateLayer(_bracketRenderer.Layer);
+        }
     }
 
     protected override void OnPreviewMouseWheel(MouseWheelEventArgs e)
