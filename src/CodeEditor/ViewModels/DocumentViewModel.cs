@@ -259,6 +259,53 @@ public sealed partial class DocumentViewModel : ObservableObject
         return await _lspService.GetReferencesAsync(FilePath, location.Line - 1, location.Column - 1, cancellationToken);
     }
 
+    /// <summary>
+    /// Format edits for the whole document: Roslyn for C# (offset-based), the language
+    /// server for TS/JS (LSP range edits converted to offsets), null otherwise.
+    /// </summary>
+    public async Task<IReadOnlyList<TextEditInfo>?> GetFormattingEditsAsync(CancellationToken cancellationToken = default)
+    {
+        if (FilePath is null)
+        {
+            return null;
+        }
+
+        if (Language.Id == "csharp")
+        {
+            return await _codeAnalysis.FormatDocumentAsync(FilePath, Document.Text, cancellationToken);
+        }
+
+        if (!LspLanguages.Includes(Language.Id))
+        {
+            return null;
+        }
+
+        await _lspService.NotifyDocumentChangedAsync(FilePath, Document.Text, cancellationToken);
+        var rangeEdits = await _lspService.FormatDocumentAsync(FilePath, Options.TabWidth, cancellationToken);
+        if (rangeEdits is null)
+        {
+            return null;
+        }
+
+        var edits = new List<TextEditInfo>(rangeEdits.Count);
+        foreach (var edit in rangeEdits)
+        {
+            var start = ToOffset(edit.StartLine, edit.StartChar);
+            var end = Math.Max(start, ToOffset(edit.EndLine, edit.EndChar));
+            edits.Add(new TextEditInfo(start, end - start, edit.NewText));
+        }
+
+        return edits;
+    }
+
+    /// <summary>Converts a 0-based LSP line/character position to a document offset, clamped to bounds.</summary>
+    private int ToOffset(int lspLine, int lspChar)
+    {
+        var lineNumber = Math.Clamp(lspLine + 1, 1, Document.LineCount);
+        var line = Document.GetLineByNumber(lineNumber);
+        return line.Offset + Math.Clamp(lspChar, 0, line.Length);
+    }
+
     /// <summary>Requests the editor to move the caret and select <paramref name="selectionLength"/> characters.</summary>
     public void NavigateTo(int line, int column, int selectionLength, bool focusEditor = true)
         => PendingNavigation = new DocumentNavigation(line, column, selectionLength, focusEditor);

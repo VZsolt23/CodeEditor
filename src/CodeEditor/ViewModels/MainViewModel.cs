@@ -272,11 +272,11 @@ public sealed partial class MainViewModel : ObservableObject
         StatusText = $"Renamed to '{newName}' in {changes.Count} file(s).";
     }
 
-    /// <summary>Formats the active document with the C# conventions (Shift+Alt+F).</summary>
-    [RelayCommand(CanExecute = nameof(CanUseLanguageServices))]
+    /// <summary>Formats the active document (Shift+Alt+F); Roslyn for C#, LSP for TS/JS.</summary>
+    [RelayCommand(CanExecute = nameof(CanUseSymbolServices))]
     private async Task FormatDocumentAsync()
     {
-        if (Documents.ActiveDocument is not { FilePath: { } filePath } document)
+        if (Documents.ActiveDocument is not { FilePath: not null } document)
         {
             return;
         }
@@ -285,7 +285,7 @@ public sealed partial class MainViewModel : ObservableObject
         IReadOnlyList<Core.Documents.TextEditInfo>? edits;
         try
         {
-            edits = await _codeAnalysisService.FormatDocumentAsync(filePath, snapshot);
+            edits = await document.GetFormattingEditsAsync();
         }
         catch (OperationCanceledException)
         {
@@ -322,11 +322,8 @@ public sealed partial class MainViewModel : ObservableObject
         StatusText = $"Formatted document ({edits.Count} change(s)).";
     }
 
-    private bool CanUseLanguageServices()
-        => Documents.ActiveDocument is { FilePath: not null } document && document.Language.Id == "csharp";
-
-    // Definition, references, and rename work for C# (Roslyn) and the LSP languages;
-    // Format is still C#-only (CanUseLanguageServices) until its LSP path is wired.
+    // Definition, references, rename, and format all work for C# (Roslyn) and the
+    // LSP languages; the command is enabled for a file-backed document of either.
     private bool CanUseSymbolServices()
         => Documents.ActiveDocument is { FilePath: not null } document
            && (document.Language.Id == "csharp" || LspLanguages.Includes(document.Language.Id));

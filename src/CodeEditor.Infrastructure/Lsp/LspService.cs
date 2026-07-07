@@ -271,6 +271,35 @@ public sealed class LspService : ILspService, IDisposable
         }
     }
 
+    public async Task<IReadOnlyList<LspRangeEdit>?> FormatDocumentAsync(
+        string filePath, int tabSize, CancellationToken cancellationToken = default)
+    {
+        LspServerConnection? connection;
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            connection = _connection;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (connection is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await connection.RequestFormattingAsync(filePath, tabSize, insertSpaces: true, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsServerFailure(ex) || ex is OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
     public void Dispose()
     {
         _connection?.Dispose();

@@ -337,12 +337,22 @@ public sealed class LspServerConnection : IDisposable
             return;
         }
 
+        var parsed = ParseTextEdits(edits);
+        if (parsed.Count > 0)
+        {
+            files.Add(new LspFileEdits(path, parsed));
+        }
+    }
+
+    /// <summary>Parses an LSP <c>TextEdit[]</c> into range edits.</summary>
+    private static List<LspRangeEdit> ParseTextEdits(JsonElement edits)
+    {
+        var parsed = new List<LspRangeEdit>();
         if (edits.ValueKind != JsonValueKind.Array)
         {
-            return;
+            return parsed;
         }
 
-        var parsed = new List<LspRangeEdit>();
         foreach (var edit in edits.EnumerateArray())
         {
             if (!edit.TryGetProperty("range", out var range)
@@ -360,10 +370,31 @@ public sealed class LspServerConnection : IDisposable
                 GetString(edit, "newText") ?? string.Empty));
         }
 
-        if (parsed.Count > 0)
+        return parsed;
+    }
+
+    /// <summary>
+    /// Requests whole-document formatting. Returns the range edits (empty for an
+    /// already-formatted document), or null when the server offers no reply.
+    /// </summary>
+    public async Task<IReadOnlyList<LspRangeEdit>?> RequestFormattingAsync(
+        string filePath, int tabSize, bool insertSpaces, CancellationToken cancellationToken = default)
+    {
+        var result = await _rpc.InvokeWithParameterObjectAsync<JsonElement?>(
+            "textDocument/formatting",
+            new
+            {
+                textDocument = new { uri = ToUri(filePath) },
+                options = new { tabSize, insertSpaces },
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        if (result is not { } edits || edits.ValueKind != JsonValueKind.Array)
         {
-            files.Add(new LspFileEdits(path, parsed));
+            return null;
         }
+
+        return ParseTextEdits(edits);
     }
 
     /// <summary>Performs the polite shutdown/exit sequence, tolerating a dead server.</summary>

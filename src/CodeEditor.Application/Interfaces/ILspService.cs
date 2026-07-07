@@ -75,4 +75,12 @@ public interface ILspService
     /// </summary>
     Task<IReadOnlyList<LspFileEdits>?> RenameSymbolAsync(
         string filePath, int line, int character, string newName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests whole-document formatting (spaces, <paramref name="tabSize"/> wide).
+    /// Returns the range edits (empty when already formatted), or null when no server
+    /// is running or it offers no reply.
+    /// </summary>
+    Task<IReadOnlyList<LspRangeEdit>?> FormatDocumentAsync(
+        string filePath, int tabSize, CancellationToken cancellationToken = default);
 }
