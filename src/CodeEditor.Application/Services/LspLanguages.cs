@@ -13,6 +13,10 @@ public static class LspLanguages
         "typescriptreact",
         "javascript",
         "javascriptreact",
+        "html",
+        "css",
+        "scss",
+        "less",
     };
 
     /// <summary>Whether documents of <paramref name="languageId"/> are served by the LSP backend.</summary>

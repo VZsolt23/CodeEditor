@@ -30,6 +30,18 @@ public sealed class LspService : ILspService, IDisposable
             },
             GetCommand: settings => settings.Settings.TypeScriptServerCommand,
             InstallHint: "Install it with: npm install -g typescript-language-server typescript"),
+        new LspServerDescriptor(
+            DisplayName: "HTML",
+            DiagnosticSource: "html",
+            Languages: new HashSet<string>(StringComparer.Ordinal) { "html" },
+            GetCommand: settings => settings.Settings.HtmlServerCommand,
+            InstallHint: "Install it with: npm install -g vscode-langservers-extracted"),
+        new LspServerDescriptor(
+            DisplayName: "CSS",
+            DiagnosticSource: "css",
+            Languages: new HashSet<string>(StringComparer.Ordinal) { "css", "scss", "less" },
+            GetCommand: settings => settings.Settings.CssServerCommand,
+            InstallHint: "Install it with: npm install -g vscode-langservers-extracted"),
     ];
 
     private readonly ILogger<LspService> _logger;

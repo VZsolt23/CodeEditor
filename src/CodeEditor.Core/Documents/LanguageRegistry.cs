@@ -67,7 +67,9 @@ public sealed class LanguageRegistry : ILanguageRegistry
     {
         yield return new LanguageInfo("csharp", "C#", [".cs", ".csx"]);
         yield return new LanguageInfo("html", "HTML", [".html", ".htm", ".cshtml", ".razor"]);
-        yield return new LanguageInfo("css", "CSS", [".css", ".scss", ".less"]);
+        yield return new LanguageInfo("css", "CSS", [".css"]);
+        yield return new LanguageInfo("scss", "SCSS", [".scss"]);
+        yield return new LanguageInfo("less", "Less", [".less"]);
         yield return new LanguageInfo("javascript", "JavaScript", [".js", ".mjs", ".cjs"]);
         yield return new LanguageInfo("javascriptreact", "JavaScript React", [".jsx"]);
         yield return new LanguageInfo("typescript", "TypeScript", [".ts", ".mts", ".cts"]);

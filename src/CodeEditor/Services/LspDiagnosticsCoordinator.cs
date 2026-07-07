@@ -18,7 +18,6 @@ namespace CodeEditor.Services;
 /// </summary>
 public sealed class LspDiagnosticsCoordinator
 {
-    private const string DiagnosticSource = "typescript";
     private static readonly TimeSpan DebounceInterval = TimeSpan.FromMilliseconds(500);
 
     private readonly ILspService _lspService;
@@ -30,6 +29,7 @@ public sealed class LspDiagnosticsCoordinator
     private readonly HashSet<DocumentViewModel> _dirtyDocuments = [];
     private readonly Dictionary<DocumentViewModel, EventHandler<DocumentChangeEventArgs>> _textChangedHandlers = [];
     private readonly Dictionary<string, IReadOnlyList<DiagnosticItem>> _diagnosticsByPath = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _publishedSources = new(StringComparer.OrdinalIgnoreCase);
 
     public LspDiagnosticsCoordinator(
         ILspService lspService,
@@ -236,6 +236,30 @@ public sealed class LspDiagnosticsCoordinator
         PushProblems();
     }
 
+    /// <summary>
+    /// Publishes diagnostics to the Problems panel grouped by their real source
+    /// ("typescript"/"html"/"css") — `ProblemsViewModel.SetDiagnostics` replaces per
+    /// `DiagnosticItem.Source`, so each server's diagnostics must be pushed under its
+    /// own source, and sources that no longer have any items are cleared.
+    /// </summary>
     private void PushProblems()
-        => _problems.SetDiagnostics(DiagnosticSource, [.. _diagnosticsByPath.Values.SelectMany(items => items)]);
+    {
+        var bySource = _diagnosticsByPath.Values
+            .SelectMany(items => items)
+            .GroupBy(item => item.Source, StringComparer.OrdinalIgnoreCase);
+
+        var current = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in bySource)
+        {
+            current.Add(group.Key);
+            _problems.SetDiagnostics(group.Key, [.. group]);
+        }
+
+        foreach (var stale in _publishedSources.Where(source => !current.Contains(source)))
+        {
+            _problems.SetDiagnostics(stale, []);
+        }
+
+        _publishedSources = current;
+    }
 }
