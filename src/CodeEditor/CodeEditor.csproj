@@ -16,6 +16,8 @@
   <ItemGroup>
     <!-- Devicon file-type icon font (see Assets/Fonts/DEVICON-LICENSE.txt) -->
     <Resource Include="Assets\Fonts\devicon.ttf" />
+    <!-- App logo: embedded as a resource for the window/taskbar icon and in-app marks -->
+    <Resource Include="Assets\Images\app_logo.png" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -24,6 +26,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- Executable / Explorer icon (multi-resolution: 16–256px) -->
+    <ApplicationIcon>Assets\Images\app_logo.ico</ApplicationIcon>
   </PropertyGroup>
 
 </Project>
