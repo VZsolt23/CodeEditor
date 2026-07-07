@@ -3,6 +3,7 @@ using System.Diagnostics;
 using CodeEditor.Application.Interfaces;
 using CodeEditor.Core.Completion;
 using CodeEditor.Core.Diagnostics;
+using CodeEditor.Core.Documents;
 using CodeEditor.Core.Workspace;
 using Microsoft.Extensions.Logging;
 using StreamJsonRpc;
@@ -238,6 +239,35 @@ public sealed class LspService : ILspService, IDisposable
         catch (Exception ex) when (IsServerFailure(ex) || ex is OperationCanceledException)
         {
             return [];
+        }
+    }
+
+    public async Task<IReadOnlyList<LspFileEdits>?> RenameSymbolAsync(
+        string filePath, int line, int character, string newName, CancellationToken cancellationToken = default)
+    {
+        LspServerConnection? connection;
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            connection = _connection;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (connection is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await connection.RequestRenameAsync(filePath, line, character, newName, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsServerFailure(ex) || ex is OperationCanceledException)
+        {
+            return null;
         }
     }
 

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using CodeEditor.Core.Completion;
 using CodeEditor.Core.Diagnostics;
+using CodeEditor.Core.Documents;
 using CodeEditor.Core.Workspace;
 using StreamJsonRpc;
 
@@ -277,6 +278,92 @@ public sealed class LspServerConnection : IDisposable
             return byPath != 0 ? byPath : left.LineNumber.CompareTo(right.LineNumber);
         });
         return matches;
+    }
+
+    /// <summary>
+    /// Renames the symbol at a 0-based <paramref name="line"/>/<paramref name="character"/>
+    /// position to <paramref name="newName"/>. Returns the per-file range edits from
+    /// the WorkspaceEdit (both the <c>changes</c> map and <c>documentChanges</c> array
+    /// shapes; resource operations are ignored), or null when nothing changes.
+    /// </summary>
+    public async Task<IReadOnlyList<LspFileEdits>?> RequestRenameAsync(
+        string filePath, int line, int character, string newName, CancellationToken cancellationToken = default)
+    {
+        var result = await _rpc.InvokeWithParameterObjectAsync<JsonElement?>(
+            "textDocument/rename",
+            new { textDocument = new { uri = ToUri(filePath) }, position = new { line, character }, newName },
+            cancellationToken).ConfigureAwait(false);
+
+        if (result is not { } edit || edit.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var files = new List<LspFileEdits>();
+
+        if (edit.TryGetProperty("changes", out var changes) && changes.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var entry in changes.EnumerateObject())
+            {
+                AddFileEdits(entry.Name, entry.Value, files);
+            }
+        }
+        else if (edit.TryGetProperty("documentChanges", out var documentChanges) && documentChanges.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var change in documentChanges.EnumerateArray())
+            {
+                // Skip resource operations (create/rename/delete file) — no "edits".
+                if (change.TryGetProperty("textDocument", out var textDocument)
+                    && change.TryGetProperty("edits", out var edits)
+                    && GetString(textDocument, "uri") is { } uri)
+                {
+                    AddFileEdits(uri, edits, files);
+                }
+            }
+        }
+
+        return files.Count > 0 ? files : null;
+    }
+
+    private static void AddFileEdits(string uri, JsonElement edits, List<LspFileEdits> files)
+    {
+        string path;
+        try
+        {
+            path = new Uri(uri).LocalPath;
+        }
+        catch (UriFormatException)
+        {
+            return;
+        }
+
+        if (edits.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        var parsed = new List<LspRangeEdit>();
+        foreach (var edit in edits.EnumerateArray())
+        {
+            if (!edit.TryGetProperty("range", out var range)
+                || !range.TryGetProperty("start", out var start)
+                || !range.TryGetProperty("end", out var end))
+            {
+                continue;
+            }
+
+            parsed.Add(new LspRangeEdit(
+                start.GetProperty("line").GetInt32(),
+                start.GetProperty("character").GetInt32(),
+                end.GetProperty("line").GetInt32(),
+                end.GetProperty("character").GetInt32(),
+                GetString(edit, "newText") ?? string.Empty));
+        }
+
+        if (parsed.Count > 0)
+        {
+            files.Add(new LspFileEdits(path, parsed));
+        }
     }
 
     /// <summary>Performs the polite shutdown/exit sequence, tolerating a dead server.</summary>

@@ -1,5 +1,6 @@
 using CodeEditor.Core.Completion;
 using CodeEditor.Core.Diagnostics;
+using CodeEditor.Core.Documents;
 using CodeEditor.Core.Workspace;
 
 namespace CodeEditor.Application.Interfaces;
@@ -66,4 +67,12 @@ public interface ILspService
     /// </summary>
     Task<IReadOnlyList<SearchMatch>> GetReferencesAsync(
         string filePath, int line, int character, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Renames the symbol at a 0-based <paramref name="line"/>/<paramref name="character"/>
+    /// position to <paramref name="newName"/>, returning the per-file range edits.
+    /// Null when no server is running or the symbol cannot be renamed.
+    /// </summary>
+    Task<IReadOnlyList<LspFileEdits>?> RenameSymbolAsync(
+        string filePath, int line, int character, string newName, CancellationToken cancellationToken = default);
 }

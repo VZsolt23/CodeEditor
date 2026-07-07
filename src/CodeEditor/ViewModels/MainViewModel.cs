@@ -24,6 +24,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IFileService _fileService;
     private readonly IDialogService _dialogService;
     private readonly ICodeAnalysisService _codeAnalysisService;
+    private readonly ILspService _lspService;
 
     private DocumentViewModel? _observedDocument;
 
@@ -81,6 +82,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         themeService.ThemeChanged += OnThemeChanged;
         codeAnalysisService.StatusChanged += OnCodeAnalysisStatusChanged;
+        _lspService = lspService;
         lspService.StatusChanged += OnCodeAnalysisStatusChanged;
         recentFilesService.RecentFilesChanged += (_, _) => RebuildRecentFiles();
         documents.PropertyChanged += OnDocumentsPropertyChanged;
@@ -143,7 +145,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Jumps to the definition of the symbol at the caret (F12); Roslyn for C#, LSP for TS/JS.</summary>
-    [RelayCommand(CanExecute = nameof(CanNavigateSymbol))]
+    [RelayCommand(CanExecute = nameof(CanUseSymbolServices))]
     private async Task GoToDefinitionAsync()
     {
         if (Documents.ActiveDocument is not { FilePath: not null } document
@@ -177,7 +179,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Lists all references of the symbol at the caret in the search panel (Shift+F12); Roslyn for C#, LSP for TS/JS.</summary>
-    [RelayCommand(CanExecute = nameof(CanNavigateSymbol))]
+    [RelayCommand(CanExecute = nameof(CanUseSymbolServices))]
     private async Task FindAllReferencesAsync()
     {
         if (Documents.ActiveDocument is not { FilePath: not null } document
@@ -206,8 +208,8 @@ public sealed partial class MainViewModel : ObservableObject
         ShowMatchesInSearchPanel($"{references.Count} reference(s) in {files} file(s).", references);
     }
 
-    /// <summary>Renames the symbol at the caret across the workspace (F2).</summary>
-    [RelayCommand(CanExecute = nameof(CanUseLanguageServices))]
+    /// <summary>Renames the symbol at the caret across the workspace (F2); Roslyn for C#, LSP for TS/JS.</summary>
+    [RelayCommand(CanExecute = nameof(CanUseSymbolServices))]
     private async Task RenameSymbolAsync()
     {
         if (Documents.ActiveDocument is not { FilePath: { } filePath } document
@@ -230,7 +232,7 @@ public sealed partial class MainViewModel : ObservableObject
         IReadOnlyList<Core.Documents.FileTextChange>? changes;
         try
         {
-            changes = await _codeAnalysisService.RenameSymbolAsync(filePath, text, offset, newName);
+            changes = await ResolveRenameChangesAsync(document, filePath, text, offset, newName);
         }
         catch (OperationCanceledException)
         {
@@ -323,11 +325,76 @@ public sealed partial class MainViewModel : ObservableObject
     private bool CanUseLanguageServices()
         => Documents.ActiveDocument is { FilePath: not null } document && document.Language.Id == "csharp";
 
-    // Go to Definition and Find All References work for C# (Roslyn) and the LSP
-    // languages; Rename and Format are still C#-only until their LSP paths are wired.
-    private bool CanNavigateSymbol()
+    // Definition, references, and rename work for C# (Roslyn) and the LSP languages;
+    // Format is still C#-only (CanUseLanguageServices) until its LSP path is wired.
+    private bool CanUseSymbolServices()
         => Documents.ActiveDocument is { FilePath: not null } document
            && (document.Language.Id == "csharp" || LspLanguages.Includes(document.Language.Id));
+
+    /// <summary>
+    /// Computes the whole-file changes for a rename: Roslyn returns them directly;
+    /// for LSP the per-file range edits are applied to each file's current content
+    /// (the open buffer if the file is open, else disk) to reconstruct the new text.
+    /// </summary>
+    private async Task<IReadOnlyList<Core.Documents.FileTextChange>?> ResolveRenameChangesAsync(
+        DocumentViewModel document, string filePath, string text, int offset, string newName)
+    {
+        if (document.Language.Id == "csharp")
+        {
+            return await _codeAnalysisService.RenameSymbolAsync(filePath, text, offset, newName);
+        }
+
+        if (!LspLanguages.Includes(document.Language.Id))
+        {
+            return null;
+        }
+
+        // Flush every open LSP document so the server's view matches the buffers the
+        // edits will be applied to, then request the rename.
+        foreach (var open in Documents.Documents.Where(candidate =>
+            candidate.FilePath is not null && LspLanguages.Includes(candidate.Language.Id)))
+        {
+            await _lspService.NotifyDocumentChangedAsync(open.FilePath!, open.Document.Text);
+        }
+
+        var location = document.Document.GetLocation(Math.Clamp(offset, 0, document.Document.TextLength));
+        var fileEdits = await _lspService.RenameSymbolAsync(filePath, location.Line - 1, location.Column - 1, newName);
+        if (fileEdits is null)
+        {
+            return null;
+        }
+
+        var changes = new List<Core.Documents.FileTextChange>();
+        foreach (var file in fileEdits)
+        {
+            if (await ResolveFileContentAsync(file.FilePath) is { } content)
+            {
+                changes.Add(new Core.Documents.FileTextChange(file.FilePath, Core.Documents.TextEditApplier.Apply(content, file.Edits)));
+            }
+        }
+
+        return changes.Count > 0 ? changes : null;
+    }
+
+    /// <summary>Current content of a file: the open buffer if it is open, else the file on disk (null on read failure).</summary>
+    private async Task<string?> ResolveFileContentAsync(string path)
+    {
+        var open = Documents.Documents.FirstOrDefault(candidate =>
+            string.Equals(candidate.FilePath, path, StringComparison.OrdinalIgnoreCase));
+        if (open is not null)
+        {
+            return open.Document.Text;
+        }
+
+        try
+        {
+            return await _fileService.ReadTextAsync(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
 
     private async Task NavigateToMatchAsync(SearchMatch match)
     {
