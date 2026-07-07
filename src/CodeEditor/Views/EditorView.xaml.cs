@@ -2,10 +2,12 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using CodeEditor.Services;
 using CodeEditor.ViewModels;
 using ICSharpCode.AvalonEdit.CodeCompletion;
 using ICSharpCode.AvalonEdit.Editing;
+using ICSharpCode.AvalonEdit.Folding;
 using ICSharpCode.AvalonEdit.Indentation;
 using ICSharpCode.AvalonEdit.Indentation.CSharp;
 using ICSharpCode.AvalonEdit.Rendering;
@@ -23,6 +25,15 @@ public partial class EditorView : UserControl
     private readonly DiagnosticSquiggleRenderer _squiggleRenderer = new();
     private readonly SemanticHighlightColorizer _semanticColorizer = new();
     private readonly BracketMatchRenderer _bracketRenderer = new();
+
+    // Languages that fold on braces ({ … }); HTML/XML tag folding is a follow-up.
+    private static readonly HashSet<string> FoldingLanguages = new(StringComparer.Ordinal)
+    {
+        "csharp", "javascript", "javascriptreact", "typescript", "typescriptreact", "json", "css", "scss", "less",
+    };
+
+    private readonly DispatcherTimer _foldingTimer;
+    private FoldingManager? _foldingManager;
 
     private EditorOptionsViewModel? _observedOptions;
     private DocumentViewModel? _observedDocument;
@@ -67,12 +78,90 @@ public partial class EditorView : UserControl
         // on a theme change (startup recolor runs before this view exists).
         SyntaxHighlightingTheme.Recolored += OnSyntaxHighlightingRecolored;
         // Fires once the Document binding has applied after a tab switch — the safe
-        // moment to honor a navigation that was requested while opening the file.
-        Editor.DocumentChanged += (_, _) => ApplyPendingNavigation();
+        // moment for work that reads Editor.Document (navigation, folding, brackets).
+        Editor.DocumentChanged += (_, _) =>
+        {
+            SetUpFolding();
+            ApplyPendingNavigation();
+            UpdateBracketMatch();
+        };
+
+        _foldingTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+        _foldingTimer.Tick += (_, _) => { _foldingTimer.Stop(); RecomputeFoldings(); };
+        Editor.TextChanged += (_, _) => RestartFoldingTimer();
     }
 
     /// <summary>Moves keyboard focus into the text area (e.g. after the find panel closes).</summary>
     public void FocusEditor() => Editor.TextArea.Focus();
+
+    /// <summary>
+    /// (Re)installs the fold margin for the current document, or removes it for a
+    /// language without folding. Called on tab switch. Collapse state is not carried
+    /// across tab switches (the fold manager is per-document).
+    /// </summary>
+    private void SetUpFolding()
+    {
+        _foldingTimer.Stop();
+        if (_foldingManager is not null)
+        {
+            FoldingManager.Uninstall(_foldingManager);
+            _foldingManager = null;
+        }
+
+        if (Editor.Document is null
+            || ViewModel?.Language.Id is not { } languageId
+            || !FoldingLanguages.Contains(languageId))
+        {
+            return;
+        }
+
+        _foldingManager = FoldingManager.Install(Editor.TextArea);
+        StyleFoldingMargin();
+        RecomputeFoldings();
+    }
+
+    private void RestartFoldingTimer()
+    {
+        if (_foldingManager is null)
+        {
+            return;
+        }
+
+        _foldingTimer.Stop();
+        _foldingTimer.Start();
+    }
+
+    private void RecomputeFoldings()
+    {
+        if (_foldingManager is null || Editor.Document is null)
+        {
+            return;
+        }
+
+        var foldings = Core.Documents.FoldingComputer.ComputeBraceFolds(Editor.Document.Text)
+            .Select(fold => new NewFolding(fold.Start, fold.End))
+            .OrderBy(fold => fold.StartOffset);
+        _foldingManager.UpdateFoldings(foldings, firstErrorOffset: -1);
+    }
+
+    private void StyleFoldingMargin()
+    {
+        // The folded-placeholder ("{…}") brush is a static shared property.
+        if (TryFindResource("Brush.Text.Muted") is System.Windows.Media.Brush foldedText)
+        {
+            FoldingElementGenerator.TextBrush = foldedText;
+        }
+
+        if (Editor.TextArea.LeftMargins.OfType<FoldingMargin>().FirstOrDefault() is not { } margin)
+        {
+            return;
+        }
+
+        margin.SetResourceReference(FoldingMargin.FoldingMarkerBrushProperty, "Brush.Text.Muted");
+        margin.SetResourceReference(FoldingMargin.FoldingMarkerBackgroundBrushProperty, "Brush.Surface.Editor");
+        margin.SetResourceReference(FoldingMargin.SelectedFoldingMarkerBrushProperty, "Brush.Accent");
+        margin.SetResourceReference(FoldingMargin.SelectedFoldingMarkerBackgroundBrushProperty, "Brush.Surface.Editor");
+    }
 
     private void OnSyntaxHighlightingRecolored(object? sender, EventArgs e)
     {
@@ -540,7 +629,13 @@ public partial class EditorView : UserControl
     /// <summary>Recomputes the matched bracket pair for the caret; redraws only when it changes.</summary>
     private void UpdateBracketMatch()
     {
-        var document = Editor.Document;
+        // Editor.Document can be null/stale during a tab switch, before the Document
+        // binding applies; the real update runs on DocumentChanged.
+        if (Editor.Document is not { } document)
+        {
+            return;
+        }
+
         var match = Core.Documents.BracketMatcher.Match(document.TextLength, document.GetCharAt, Editor.CaretOffset);
         if (match != _bracketRenderer.Brackets)
         {
