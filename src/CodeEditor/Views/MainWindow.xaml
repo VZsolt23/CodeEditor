@@ -6,6 +6,7 @@
         xmlns:views="clr-namespace:CodeEditor.Views"
         xmlns:vm="clr-namespace:CodeEditor.ViewModels"
         xmlns:services="clr-namespace:CodeEditor.Services"
+        xmlns:core="clr-namespace:CodeEditor.Core.Documents;assembly=CodeEditor.Core"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
         Title="{Binding Title}"
@@ -217,8 +218,30 @@
                             <Run Text="Spaces: " /><Run Text="{Binding Options.TabWidth, Mode=OneWay}" />
                         </TextBlock>
                     </Border>
-                    <Border Style="{StaticResource StatusPillStyle}">
-                        <TextBlock Text="UTF-8" />
+                    <Border Style="{StaticResource StatusPillStyle}"
+                            Cursor="Hand"
+                            ToolTip="Save with encoding…"
+                            MouseLeftButtonUp="OnEncodingPillClick">
+                        <Border.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="UTF-8"
+                                          Command="{Binding Documents.SaveWithEncodingCommand}"
+                                          CommandParameter="{x:Static core:TextEncodingKind.Utf8}" />
+                                <MenuItem Header="UTF-8 with BOM"
+                                          Command="{Binding Documents.SaveWithEncodingCommand}"
+                                          CommandParameter="{x:Static core:TextEncodingKind.Utf8Bom}" />
+                                <MenuItem Header="UTF-16 LE"
+                                          Command="{Binding Documents.SaveWithEncodingCommand}"
+                                          CommandParameter="{x:Static core:TextEncodingKind.Utf16Le}" />
+                                <MenuItem Header="UTF-16 BE"
+                                          Command="{Binding Documents.SaveWithEncodingCommand}"
+                                          CommandParameter="{x:Static core:TextEncodingKind.Utf16Be}" />
+                                <MenuItem Header="Windows-1252"
+                                          Command="{Binding Documents.SaveWithEncodingCommand}"
+                                          CommandParameter="{x:Static core:TextEncodingKind.Ansi}" />
+                            </ContextMenu>
+                        </Border.ContextMenu>
+                        <TextBlock Text="{Binding Documents.ActiveDocument.EncodingDisplayName}" />
                     </Border>
                 </StackPanel>
             </Grid>

@@ -42,6 +42,16 @@ public partial class MainWindow : Window
 
     private void OnCloseWindowClick(object sender, RoutedEventArgs e) => Close();
 
+    /// <summary>Opens the encoding pill's save-with-encoding menu on left click too.</summary>
+    private void OnEncodingPillClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { ContextMenu: { } menu } element)
+        {
+            menu.PlacementTarget = element;
+            menu.IsOpen = true;
+        }
+    }
+
     protected override void OnStateChanged(EventArgs e)
     {
         base.OnStateChanged(e);

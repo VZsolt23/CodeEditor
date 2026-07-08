@@ -45,6 +45,14 @@ public sealed partial class DocumentViewModel : ObservableObject
     [ObservableProperty]
     private LanguageInfo _language;
 
+    /// <summary>
+    /// Encoding the document is saved in: detected when the file was opened,
+    /// UTF-8 (no BOM) for new documents, changeable via the status bar pill.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EncodingDisplayName))]
+    private TextEncodingKind _encoding = TextEncodingKind.Utf8;
+
     [ObservableProperty]
     private IHighlightingDefinition? _syntaxHighlighting;
 
@@ -120,6 +128,9 @@ public sealed partial class DocumentViewModel : ObservableObject
 
     /// <summary>Display name: the file name, or the untitled placeholder.</summary>
     public string FileName => FilePath is null ? _untitledName : Path.GetFileName(FilePath);
+
+    /// <summary>Status bar text for <see cref="Encoding"/> (e.g. "UTF-8", "UTF-16 LE").</summary>
+    public string EncodingDisplayName => Encoding.DisplayName();
 
     /// <summary>
     /// Requests code completion at <paramref name="offset"/>: Roslyn for C#, the

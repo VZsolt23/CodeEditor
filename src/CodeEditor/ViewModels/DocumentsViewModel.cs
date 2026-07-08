@@ -114,10 +114,10 @@ public sealed partial class DocumentsViewModel : ObservableObject
             return;
         }
 
-        string text;
+        TextFileReadResult content;
         try
         {
-            text = await _fileService.ReadTextAsync(fullPath);
+            content = await _fileService.ReadTextWithEncodingAsync(fullPath);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
         {
@@ -128,13 +128,16 @@ public sealed partial class DocumentsViewModel : ObservableObject
 
         var document = new DocumentViewModel(
             filePath: fullPath,
-            initialText: text,
+            initialText: content.Text,
             untitledName: System.IO.Path.GetFileName(fullPath),
             language: _languageRegistry.GetForFile(fullPath),
             options: _options,
             codeAnalysis: _codeAnalysis,
             lspService: _lspService,
-            closeRequested: CloseDocumentAsync);
+            closeRequested: CloseDocumentAsync)
+        {
+            Encoding = content.Encoding,
+        };
 
         Documents.Add(document);
         ActiveDocument = document;
@@ -171,6 +174,26 @@ public sealed partial class DocumentsViewModel : ObservableObject
             {
                 return;
             }
+        }
+    }
+
+    /// <summary>
+    /// Switches the active document to <paramref name="encoding"/> and saves it
+    /// (invoked from the status bar encoding pill).
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private async Task SaveWithEncodingAsync(TextEncodingKind encoding)
+    {
+        if (ActiveDocument is null)
+        {
+            return;
+        }
+
+        var previous = ActiveDocument.Encoding;
+        ActiveDocument.Encoding = encoding;
+        if (!await SaveAsync(ActiveDocument))
+        {
+            ActiveDocument.Encoding = previous;
         }
     }
 
@@ -295,7 +318,7 @@ public sealed partial class DocumentsViewModel : ObservableObject
     {
         try
         {
-            await _fileService.WriteTextAsync(path, document.Document.Text);
+            await _fileService.WriteTextAsync(path, document.Document.Text, document.Encoding);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
@@ -317,7 +340,7 @@ public sealed partial class DocumentsViewModel : ObservableObject
         {
             try
             {
-                await _fileService.WriteTextAsync(document.FilePath!, document.Document.Text);
+                await _fileService.WriteTextAsync(document.FilePath!, document.Document.Text, document.Encoding);
                 document.MarkSaved();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
