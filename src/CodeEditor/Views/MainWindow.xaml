@@ -309,6 +309,7 @@
                               Grid.Row="1"
                               ItemsSource="{Binding Explorer.Roots}"
                               VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               MouseDoubleClick="OnExplorerTreeMouseDoubleClick"
                               KeyDown="OnExplorerTreeKeyDown">
@@ -521,6 +522,8 @@
                         <TreeView x:Name="SearchResultsTree"
                                   Grid.Row="3"
                                   ItemsSource="{Binding Search.Results}"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
                                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                   KeyDown="OnSearchResultsKeyDown">
                             <TreeView.Resources>

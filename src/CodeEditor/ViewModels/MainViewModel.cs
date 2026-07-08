@@ -85,6 +85,7 @@ public sealed partial class MainViewModel : ObservableObject
         _lspService = lspService;
         lspService.StatusChanged += OnCodeAnalysisStatusChanged;
         recentFilesService.RecentFilesChanged += (_, _) => RebuildRecentFiles();
+        documents.StatusRequested += (_, message) => StatusText = message;
         settingsService.SettingsReloaded += OnSettingsReloaded;
         documents.PropertyChanged += OnDocumentsPropertyChanged;
         explorer.PropertyChanged += OnExplorerPropertyChanged;

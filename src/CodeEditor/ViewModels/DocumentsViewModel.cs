@@ -67,6 +67,13 @@ public sealed partial class DocumentsViewModel : ObservableObject
         _autoSaveTimer.Start();
     }
 
+    /// <summary>
+    /// A non-modal status notice (e.g. "file not opened: lines too long"), for the
+    /// status bar. An event rather than a dialog so session restore can never
+    /// block startup on a message box.
+    /// </summary>
+    public event EventHandler<string>? StatusRequested;
+
     /// <summary>Open documents, in tab order.</summary>
     public ObservableCollection<DocumentViewModel> Documents { get; } = [];
 
@@ -130,6 +137,15 @@ public sealed partial class DocumentsViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to open {Path}", fullPath);
             _dialogService.ShowError("Open File", $"Could not open '{fullPath}'.\n\n{ex.Message}");
+            return;
+        }
+
+        // AvalonEdit freezes on extreme documents (see TextStatistics); refuse them
+        // with a status notice instead of hanging the app.
+        if (TextStatistics.GetEditorSafetyIssue(content.Text) is { } issue)
+        {
+            _logger.LogWarning("Refused to open {Path}: {Issue}", fullPath, issue);
+            StatusRequested?.Invoke(this, $"'{System.IO.Path.GetFileName(fullPath)}' was not opened: {issue}.");
             return;
         }
 
