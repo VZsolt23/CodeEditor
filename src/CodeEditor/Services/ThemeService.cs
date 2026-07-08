@@ -56,10 +56,15 @@ public sealed class ThemeService : IThemeService
         var dictionary = new ResourceDictionary { Source = definition.ResourceUri };
         var merged = System.Windows.Application.Current.Resources.MergedDictionaries;
 
+        // App.xaml declares the startup theme with a relative Source
+        // ("Themes/DarkTheme.xaml"), so it must be resolved to an absolute pack URI
+        // before comparing — otherwise the first ApplyTheme fails to find it,
+        // inserts the new theme *before* it, and the startup theme keeps winning
+        // (later merged dictionaries take precedence in WPF).
         var previous = _currentDictionary
             ?? merged.FirstOrDefault(existing =>
-                existing.Source is not null
-                && _themes.Any(theme => theme.ResourceUri == existing.Source));
+                existing.Source is { } source
+                && _themes.Any(theme => theme.ResourceUri == ToAbsolutePackUri(source)));
 
         var index = previous is not null ? merged.IndexOf(previous) : -1;
         if (index >= 0)
@@ -76,4 +81,7 @@ public sealed class ThemeService : IThemeService
         _logger.LogInformation("Applied theme '{ThemeId}'", definition.Info.Id);
         ThemeChanged?.Invoke(this, definition.Info);
     }
+
+    private static Uri ToAbsolutePackUri(Uri source)
+        => source.IsAbsoluteUri ? source : new Uri(new Uri("pack://application:,,,/"), source);
 }
