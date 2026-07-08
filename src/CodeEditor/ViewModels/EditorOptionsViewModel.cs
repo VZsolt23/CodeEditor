@@ -43,6 +43,20 @@ public sealed partial class EditorOptionsViewModel : ObservableObject
         _tabWidth = Math.Max(1, settings.TabWidth);
     }
 
+    /// <summary>
+    /// Re-reads the display options from the current settings (used by settings
+    /// hot-reload). Also resets any transient zoom to the configured font size.
+    /// </summary>
+    public void ApplyFromSettings()
+    {
+        var settings = _settingsService.Settings;
+        FontFamily = settings.FontFamily;
+        FontSize = Math.Clamp(settings.FontSize, MinFontSize, MaxFontSize);
+        WordWrap = settings.WordWrap;
+        ShowLineNumbers = settings.ShowLineNumbers;
+        TabWidth = Math.Max(1, settings.TabWidth);
+    }
+
     partial void OnWordWrapChanged(bool value) => _settingsService.Settings.WordWrap = value;
 
     partial void OnShowLineNumbersChanged(bool value) => _settingsService.Settings.ShowLineNumbers = value;

@@ -85,10 +85,37 @@ public sealed partial class MainViewModel : ObservableObject
         _lspService = lspService;
         lspService.StatusChanged += OnCodeAnalysisStatusChanged;
         recentFilesService.RecentFilesChanged += (_, _) => RebuildRecentFiles();
+        settingsService.SettingsReloaded += OnSettingsReloaded;
         documents.PropertyChanged += OnDocumentsPropertyChanged;
         explorer.PropertyChanged += OnExplorerPropertyChanged;
 
         RebuildRecentFiles();
+    }
+
+    /// <summary>
+    /// Applies an externally edited settings file at runtime: theme, editor display
+    /// options, recent files, and the explorer's exclusion list. Raised by the
+    /// watcher on a background thread, so the work is marshaled to the UI thread.
+    /// </summary>
+    private void OnSettingsReloaded(object? sender, EventArgs e)
+    {
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            var settings = _settingsService.Settings;
+            if (!string.Equals(settings.Theme, _themeService.CurrentTheme.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                _themeService.ApplyTheme(settings.Theme);
+            }
+
+            Options.ApplyFromSettings();
+            RebuildRecentFiles();
+            if (Explorer.HasWorkspace)
+            {
+                Explorer.RefreshCommand.Execute(null);
+            }
+
+            StatusText = "Settings reloaded from settings.json";
+        });
     }
 
     /// <summary>Raised when the user requests application exit (File → Exit).</summary>

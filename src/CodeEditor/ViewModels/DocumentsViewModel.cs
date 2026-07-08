@@ -57,14 +57,21 @@ public sealed partial class DocumentsViewModel : ObservableObject
         _options = options;
         _logger = logger;
 
-        var interval = Math.Max(1, settingsService.Settings.AutoSaveIntervalSeconds);
-        _autoSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(interval) };
-        _autoSaveTimer.Tick += async (_, _) => await AutoSaveAsync();
+        _autoSaveTimer = new DispatcherTimer { Interval = AutoSaveInterval };
+        _autoSaveTimer.Tick += async (_, _) =>
+        {
+            // Re-read each tick so settings hot-reload can change the cadence.
+            _autoSaveTimer.Interval = AutoSaveInterval;
+            await AutoSaveAsync();
+        };
         _autoSaveTimer.Start();
     }
 
     /// <summary>Open documents, in tab order.</summary>
     public ObservableCollection<DocumentViewModel> Documents { get; } = [];
+
+    private TimeSpan AutoSaveInterval
+        => TimeSpan.FromSeconds(Math.Max(1, _settingsService.Settings.AutoSaveIntervalSeconds));
 
     /// <summary>Whether any open document has unsaved changes.</summary>
     public bool HasDirtyDocuments => Documents.Any(document => document.IsDirty);

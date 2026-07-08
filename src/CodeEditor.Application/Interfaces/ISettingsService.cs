@@ -18,4 +18,12 @@ public interface ISettingsService
 
     /// <summary>Persists the current settings to disk.</summary>
     Task SaveAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Raised after the settings file was modified externally (e.g. hand-edited) and
+    /// <see cref="Settings"/> was replaced with the reloaded values. Not raised for the
+    /// service's own saves. May be raised on a background thread — subscribers that
+    /// touch UI state must marshal to the UI thread.
+    /// </summary>
+    event EventHandler? SettingsReloaded;
 }
