@@ -1,7 +1,7 @@
 namespace CodeEditor.Application.Services;
 
 /// <summary>
-/// The language ids served by the LSP backend (the TypeScript/JavaScript family).
+/// The language ids served by the LSP backend (TypeScript/JavaScript, HTML, CSS, JSON).
 /// These match <c>LanguageRegistry</c> ids, which double as LSP languageId values.
 /// Single source of truth for routing editor requests to the language server.
 /// </summary>
@@ -17,6 +17,8 @@ public static class LspLanguages
         "css",
         "scss",
         "less",
+        "json",
+        "jsonc",
     };
 
     /// <summary>Whether documents of <paramref name="languageId"/> are served by the LSP backend.</summary>

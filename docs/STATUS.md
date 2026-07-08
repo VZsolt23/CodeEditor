@@ -1,6 +1,6 @@
 # Project Status and Remaining Work
 
-_Last updated: 2026-07-08. Build verified: `dotnet build CodeEditor.slnx` → 0 warnings, 0 errors; app launch + graceful shutdown + settings round-trip smoke-tested. Headless test harness: **188 checks, all passing** — `WorkspaceService`/`SearchService`/`TextSearcher` (filtering, watcher debounce, CRUD, match options, truncation, cancellation, word boundaries), `OutputService`/`OutputLoggerProvider` (channel caps, log formatting), `RecentFilesService` (change event on the caller's thread), `TerminalService` (shell echo/exit/dispose-kill), `RoslynWorkspaceService` (the full C# feature set — diagnostics, completion, quick info, signature help, definitions/references/rename, formatting, classification — against a real MSBuild-loaded project), and the LSP client (`LspServerConnection`/`LspService`: handshake, document sync, diagnostics mapping, hover, completion, definition, and graceful degradation) against an in-process fake server._
+_Last updated: 2026-07-08. Build verified: `dotnet build CodeEditor.slnx` → 0 warnings, 0 errors; app launch + graceful shutdown + settings round-trip smoke-tested. Headless test harness: **206 checks, all passing** — `WorkspaceService`/`SearchService`/`TextSearcher` (filtering, watcher debounce, CRUD, match options, truncation, cancellation, word boundaries), `OutputService`/`OutputLoggerProvider` (channel caps, log formatting), `RecentFilesService` (change event on the caller's thread), `TerminalService` (shell echo/exit/dispose-kill), `RoslynWorkspaceService` (the full C# feature set — diagnostics, completion, quick info, signature help, definitions/references/rename, formatting, classification — against a real MSBuild-loaded project), and the LSP client (`LspServerConnection`/`LspService`: handshake, document sync, diagnostics mapping, hover, completion, definition, and graceful degradation) against an in-process fake server._
 
 ## Where We Are
 
@@ -92,8 +92,12 @@ VS Code-derived look. All six phases landed:
 
 ### Phase 6 — Frameworks and Polish
 
-- [ ] React (JSX/TSX via TS server), Angular Language Service integration
-- [ ] JSON schema validation, XML validation, folding for JSON/XML
+- [x] React (JSX/TSX via TS server) — already complete since Phase 5: `.jsx`/`.tsx` map to `javascriptreact`/`typescriptreact`, which the TypeScript server descriptor serves with all seven features; highlighting falls back TSX/JSX→JS; brace folding covers both
+- [ ] Angular Language Service — deferred: `LspService` routes each language id to exactly one host, and the Angular server wants both `html` and `typescript`, colliding with the existing HTML and TS hosts. Needs multi-host fan-out (or per-workspace host selection) first
+- [x] JSON + XML language support — three pieces:
+  - **JSON language server**: fourth `LspServerDescriptor` (`vscode-json-language-server`, same `vscode-langservers-extracted` package as HTML/CSS, `jsonServerCommand` setting) serving `json`/`jsonc` — syntax validation, completion, hover, format through the existing pool. The `jsonc` language id was split from `json` (`.jsonc` files) so comments aren't flagged: the server is strict under languageId `json`, lenient under `jsonc`. Schema-based validation is not configured (the server would need schema downloads/`json.schemas` config) — syntax-level only
+  - **XML validation**: `Core.Diagnostics.XmlWellFormednessChecker` (XmlReader, DTDs ignored, no external resolution; XML errors are fatal so at most one diagnostic) + `XmlDiagnosticsCoordinator` (same shape as the C# coordinator, 500 ms debounce, synchronous checker) → squiggles + Problems under source "xml"
+  - **HTML/XML tag folding**: `Core.Documents.TagFoldingComputer` — tolerant single-pass scanner (quoted attributes, comments, CDATA, declarations, self-closing tags, HTML void elements via `TagAutoCloser.IsVoidElement`, case-insensitive names in HTML, mismatch recovery for mid-edit text); elements fold `[end of open tag, start of close tag)` so collapsing shows `<div>…</div>`, multi-line comments fold their interior. `EditorView` routes html/xml to it, everything else to brace folding
 - [ ] Performance pass: startup time, large-file handling, virtualization in explorer/search results
 
 ### Cross-Cutting Backlog (items from [SPEC.md](SPEC.md) not yet tied to a phase)

@@ -26,10 +26,11 @@ public partial class EditorView : UserControl
     private readonly SemanticHighlightColorizer _semanticColorizer = new();
     private readonly BracketMatchRenderer _bracketRenderer = new();
 
-    // Languages that fold on braces ({ … }); HTML/XML tag folding is a follow-up.
+    // Languages with a fold margin: braces ({ … }) or markup tags (see RecomputeFoldings).
     private static readonly HashSet<string> FoldingLanguages = new(StringComparer.Ordinal)
     {
-        "csharp", "javascript", "javascriptreact", "typescript", "typescriptreact", "json", "css", "scss", "less",
+        "csharp", "javascript", "javascriptreact", "typescript", "typescriptreact", "json", "jsonc", "css", "scss", "less",
+        "html", "xml",
     };
 
     private readonly DispatcherTimer _foldingTimer;
@@ -138,7 +139,14 @@ public partial class EditorView : UserControl
             return;
         }
 
-        var foldings = Core.Documents.FoldingComputer.ComputeBraceFolds(Editor.Document.Text)
+        var text = Editor.Document.Text;
+        var folds = ViewModel?.Language.Id switch
+        {
+            "html" => Core.Documents.TagFoldingComputer.ComputeTagFolds(text, isHtml: true),
+            "xml" => Core.Documents.TagFoldingComputer.ComputeTagFolds(text, isHtml: false),
+            _ => Core.Documents.FoldingComputer.ComputeBraceFolds(text),
+        };
+        var foldings = folds
             .Select(fold => new NewFolding(fold.Start, fold.End))
             .OrderBy(fold => fold.StartOffset);
         _foldingManager.UpdateFoldings(foldings, firstErrorOffset: -1);

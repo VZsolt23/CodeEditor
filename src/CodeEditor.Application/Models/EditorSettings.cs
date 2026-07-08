@@ -50,6 +50,9 @@ public sealed class EditorSettings
     /// <summary>Command that starts the CSS/SCSS/Less language server (spawned with --stdio).</summary>
     public string CssServerCommand { get; set; } = "vscode-css-language-server";
 
+    /// <summary>Command that starts the JSON language server (spawned with --stdio).</summary>
+    public string JsonServerCommand { get; set; } = "vscode-json-language-server";
+
     /// <summary>Whether the last session (folder, expanded nodes, open tabs) is restored at startup.</summary>
     public bool RestoreSession { get; set; } = true;
 

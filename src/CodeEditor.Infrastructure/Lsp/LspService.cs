@@ -42,6 +42,12 @@ public sealed class LspService : ILspService, IDisposable
             Languages: new HashSet<string>(StringComparer.Ordinal) { "css", "scss", "less" },
             GetCommand: settings => settings.Settings.CssServerCommand,
             InstallHint: "Install it with: npm install -g vscode-langservers-extracted"),
+        new LspServerDescriptor(
+            DisplayName: "JSON",
+            DiagnosticSource: "json",
+            Languages: new HashSet<string>(StringComparer.Ordinal) { "json", "jsonc" },
+            GetCommand: settings => settings.Settings.JsonServerCommand,
+            InstallHint: "Install it with: npm install -g vscode-langservers-extracted"),
     ];
 
     private readonly ILogger<LspService> _logger;

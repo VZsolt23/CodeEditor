@@ -14,6 +14,9 @@ public static class TagAutoCloser
         "keygen", "link", "meta", "param", "source", "track", "wbr",
     };
 
+    /// <summary>Whether <paramref name="name"/> is an HTML void element (no closing tag). Case-insensitive.</summary>
+    public static bool IsVoidElement(string name) => VoidElements.Contains(name);
+
     /// <summary>
     /// Given <paramref name="inner"/> (the text between a tag's '&lt;' and '&gt;'),
     /// returns the tag name to close, or null when no closing tag should be inserted:

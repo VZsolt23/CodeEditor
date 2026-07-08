@@ -74,7 +74,10 @@ public sealed class LanguageRegistry : ILanguageRegistry
         yield return new LanguageInfo("javascriptreact", "JavaScript React", [".jsx"]);
         yield return new LanguageInfo("typescript", "TypeScript", [".ts", ".mts", ".cts"]);
         yield return new LanguageInfo("typescriptreact", "TypeScript React", [".tsx"]);
-        yield return new LanguageInfo("json", "JSON", [".json", ".jsonc"]);
+        // Separate ids: the JSON language server flags comments under "json" but
+        // accepts them under "jsonc", so each needs its correct LSP languageId.
+        yield return new LanguageInfo("json", "JSON", [".json"]);
+        yield return new LanguageInfo("jsonc", "JSON with Comments", [".jsonc"]);
         yield return new LanguageInfo("xml", "XML",
             [".xml", ".csproj", ".props", ".targets", ".config", ".xaml", ".resx", ".nuspec", ".xsd", ".xslt"]);
         yield return new LanguageInfo("yaml", "YAML", [".yml", ".yaml"]);

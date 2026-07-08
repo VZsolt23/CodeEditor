@@ -62,6 +62,7 @@ public partial class App : System.Windows.Application
         // or they miss the WorkspaceChanged event that triggers the language loads.
         _services.GetRequiredService<CSharpDiagnosticsCoordinator>();
         _services.GetRequiredService<LspDiagnosticsCoordinator>();
+        _services.GetRequiredService<XmlDiagnosticsCoordinator>();
 
         // Best effort, after the window is up; failures surface per file (or are
         // logged) without blocking startup.
@@ -117,6 +118,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<CSharpDiagnosticsCoordinator>();
         services.AddSingleton<LspDiagnosticsCoordinator>();
+        services.AddSingleton<XmlDiagnosticsCoordinator>();
         services.AddSingleton<EditorOptionsViewModel>();
         services.AddSingleton<DocumentsViewModel>();
         services.AddSingleton<ExplorerViewModel>();
