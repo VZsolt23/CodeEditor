@@ -331,7 +331,7 @@
                         <Border HorizontalAlignment="Left"
                                 Margin="10,9,10,5"
                                 Background="{DynamicResource Brush.Surface.Sunken}"
-                                CornerRadius="999"
+                                CornerRadius="8"
                                 Padding="2">
                             <TabPanel IsItemsHost="True" KeyboardNavigation.TabNavigation="Once" />
                         </Border>
@@ -350,7 +350,7 @@
                 <ControlTemplate TargetType="{x:Type TabItem}">
                     <Border x:Name="Root"
                             Background="Transparent"
-                            CornerRadius="999"
+                            CornerRadius="6"
                             Padding="12,3"
                             SnapsToDevicePixels="True">
                         <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />

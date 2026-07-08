@@ -30,7 +30,8 @@ technical; soft and layered where Sublime is flat and dense. Two faces of the sa
 4. **Quiet chrome, content forward.** The editor text is the highest-contrast element on screen.
    Chrome text sits one or two contrast steps below. No colored status bar, no uppercase shouting.
 5. **Rhythm.** 4px base unit. Panel gutters 8px, card padding 12px, control padding 8×5px.
-   Corner radii: 10px cards, 6px controls, 999px pills.
+   Corner radii: 10px cards, 6px controls, 999px pills (status footer / workspace pill only —
+   segmented switchers use the control scale: 8px track, 6px segments).
 6. **Motion as feedback.** 120–150ms ease-out fades on hover/selection; nothing bounces, nothing
    slides for decoration. (WPF: `Trigger.EnterActions` with short `DoubleAnimation`s, applied only
    where cheap.)
@@ -104,9 +105,10 @@ chrome — they live on the keyboard).
 
 Cards on canvas: sidebar card | editor card | bottom card, separated by 8px gutters over
 `Canvas`. Splitters are the gutters themselves — invisible, cursor change + faint accent line on
-hover. Sidebar and bottom panel headers use **segmented pill switchers** ("Files / Search",
-"Output / Problems / Terminal") instead of tab strips — selected segment gets `Accent.Soft` fill
-with `Accent` text.
+hover. Sidebar and bottom panel headers use **segmented switchers** ("Files / Search",
+"Output / Problems / Terminal") instead of tab strips — an 8px-rounded sunken track with
+6px-rounded segments (softly rounded rectangles, not full pills); the selected segment gets
+`Accent.Soft` fill with `Accent` text.
 
 ### Editor tabs
 
