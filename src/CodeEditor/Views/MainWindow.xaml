@@ -117,6 +117,20 @@
                 <MenuItem Header="Find All Re_ferences" Command="{Binding FindAllReferencesCommand}" InputGestureText="Shift+F12" />
                 <MenuItem Header="Re_name Symbol…" Command="{Binding RenameSymbolCommand}" InputGestureText="F2" />
                 <MenuItem Header="Forma_t Document" Command="{Binding FormatDocumentCommand}" InputGestureText="Shift+Alt+F" />
+                <Separator />
+                <MenuItem Header="Read-_Only Mode"
+                          IsCheckable="True"
+                          IsChecked="{Binding Documents.ActiveDocument.IsReadOnly, Mode=TwoWay}">
+                    <MenuItem.Style>
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Documents.ActiveDocument}" Value="{x:Null}">
+                                    <Setter Property="IsEnabled" Value="False" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </MenuItem.Style>
+                </MenuItem>
             </MenuItem>
 
             <MenuItem Header="_View">
@@ -205,6 +219,14 @@
                             <Setter Property="FontSize" Value="11" />
                         </Style>
                     </StackPanel.Resources>
+                    <Border Style="{StaticResource StatusPillStyle}"
+                            ToolTip="This document is read-only (Edit → Read-Only Mode)"
+                            Visibility="{Binding Documents.ActiveDocument.IsReadOnly, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBlock Text="Read-only" />
+                        </StackPanel>
+                    </Border>
                     <Border Style="{StaticResource StatusPillStyle}">
                         <TextBlock Text="{Binding Documents.ActiveDocument.Language.DisplayName}" />
                     </Border>

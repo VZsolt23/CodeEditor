@@ -63,6 +63,18 @@ public sealed class FileService : IFileService
 
     public bool FileExists(string path) => File.Exists(path);
 
+    public bool IsReadOnly(string path)
+    {
+        try
+        {
+            return File.Exists(path) && File.GetAttributes(path).HasFlag(FileAttributes.ReadOnly);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>Maps an encoding kind to the <see cref="Encoding"/> used to decode and save it.</summary>
     private static Encoding GetEncoding(TextEncodingKind kind) => kind switch
     {

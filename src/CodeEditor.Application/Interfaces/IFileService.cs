@@ -31,4 +31,7 @@ public interface IFileService
 
     /// <summary>Returns whether the file exists.</summary>
     bool FileExists(string path);
+
+    /// <summary>Returns whether the file exists and carries the read-only attribute.</summary>
+    bool IsReadOnly(string path);
 }

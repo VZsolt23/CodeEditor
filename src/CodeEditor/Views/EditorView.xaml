@@ -5,6 +5,7 @@
 
     <avalonedit:TextEditor x:Name="Editor"
                            Document="{Binding Document}"
+                           IsReadOnly="{Binding IsReadOnly}"
                            SyntaxHighlighting="{Binding SyntaxHighlighting}"
                            FontFamily="{Binding Options.FontFamily}"
                            FontSize="{Binding Options.FontSize}"

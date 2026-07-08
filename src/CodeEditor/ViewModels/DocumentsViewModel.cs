@@ -144,6 +144,7 @@ public sealed partial class DocumentsViewModel : ObservableObject
             closeRequested: CloseDocumentAsync)
         {
             Encoding = content.Encoding,
+            IsReadOnly = _fileService.IsReadOnly(fullPath),
         };
 
         Documents.Add(document);

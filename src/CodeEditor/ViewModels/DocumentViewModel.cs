@@ -36,6 +36,14 @@ public sealed partial class DocumentViewModel : ObservableObject
     [ObservableProperty]
     private bool _isDirty;
 
+    /// <summary>
+    /// Blocks user edits in the editor. Set at open for files with the read-only
+    /// attribute; toggleable per document from the Edit menu. A UI-level guard —
+    /// programmatic buffer edits (e.g. multi-file rename) are not affected.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isReadOnly;
+
     [ObservableProperty]
     private int _caretLine = 1;
 

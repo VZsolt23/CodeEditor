@@ -303,7 +303,9 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanUseSymbolServices))]
     private async Task FormatDocumentAsync()
     {
-        if (Documents.ActiveDocument is not { FilePath: not null } document)
+        // IsReadOnly only blocks keyboard input in AvalonEdit; formatting edits the
+        // buffer programmatically, so it must respect the flag itself.
+        if (Documents.ActiveDocument is not { FilePath: not null, IsReadOnly: false } document)
         {
             return;
         }
